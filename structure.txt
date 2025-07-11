@@ -1,0 +1,80 @@
+crisis-pulse/
+├── .env                              # Root environment (secrets, ports)
+├── .gitignore
+├── README.md                         # Onboarding instructions
+│
+├── frontend/                         # React + Tailwind UI
+│   ├── public/
+│   ├── src/
+│   │   ├── components/               # Reusable UI components
+│   │   │   ├── GlobalAlert.jsx
+│   │   │   ├── DisasterCard.jsx
+│   │   │   ├── ContributionForm.jsx
+│   │   │   └── ToastNotification.jsx
+│   │   ├── pages/                    # Route-based pages
+│   │   │   ├── Home.jsx
+│   │   │   ├── VolunteerDashboard.jsx
+│   │   │   ├── CRPFDashboard.jsx
+│   │   │   ├── AdminPanel.jsx
+│   │   │   ├── SafetyCenter.jsx
+│   │   │   ├── RegisterVolunteer.jsx
+│   │   │   └── DisasterFeed.jsx
+│   │   ├── hooks/
+│   │   │   └── useDisasterSocket.js
+│   │   ├── services/                 # Axios API layer
+│   │   │   └── api.js
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx
+│   │   ├── App.js
+│   │   └── index.js
+│   └── tailwind.config.js
+│
+├── backend/                          # Node.js + Express + MongoDB
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── disasterController.js
+│   │   ├── notificationController.js
+│   │   ├── contributionController.js
+│   │   └── userController.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── userRoutes.js
+│   │   ├── disasterRoutes.js
+│   │   ├── notificationRoutes.js
+│   │   └── contributionRoutes.js
+│   ├── models/
+│   │   ├── User.js
+│   │   ├── Disaster.js
+│   │   ├── Notification.js
+│   │   └── Contribution.js
+│   ├── sockets/
+│   │   └── socketHandler.js         # Socket.io events
+│   ├── utils/
+│   │   ├── sendEmail.js
+│   │   ├── getLLMAdvice.js
+│   │   └── geoUtils.js              # distance calc
+│   ├── config/
+│   │   └── db.js
+│   ├── app.js
+│   └── server.js
+│
+├── ai-service/                       # Django-based AI prediction
+│   ├── ai_service/
+│   │   ├── __init__.py
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   ├── views.py                 # POST /predict
+│   │   └── utils/
+│   │       ├── predictor.py
+│   │       └── data_loader.py
+│   ├── manage.py
+│   └── requirements.txt
+│
+├── shared/                           # Shared constants / API contracts
+│   ├── constants.js
+│   └── frontend_api_contract.txt    # Full API reference for React team
+│
+└── docs/
+    ├── architecture.md              # High-level system diagram
+    ├── roles.md                     # User flows: CRPF / Volunteer / Public
+    └── ml_model_docs.md             # Model input/output & data sources

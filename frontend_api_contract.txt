@@ -1,0 +1,225 @@
+
+============================================================
+                 Crisis Pulse - API Documentation
+============================================================
+
+Project Stack: MERN (React, Express, MongoDB) + Django (AI) + GPT-4 (LLM)
+Architecture: API-First (Contract-Driven Development)
+Security: JWT Authentication for Registered Users
+
+============================================================
+TABLE OF CONTENTS
+============================================================
+1. Auth API (JWT Secured)
+2. Disaster Prediction (AI Service)
+3. Disaster Management (Create, Fetch, Flag)
+4. Notifications (Web + Email + LLM Tips)
+5. Volunteer Contribution
+6. Points & Rewards
+7. User Management
+8. Sample Payloads
+
+============================================================
+1. AUTH API (JWT SECURED)
+============================================================
+
+[POST] /api/auth/register
+→ Register a new user
+
+Request:
+{
+  "name": "Amit",
+  "email": "amit@example.com",
+  "password": "secure123",
+  "role": "volunteer",
+  "location": {
+    "city": "Surat",
+    "state": "Gujarat",
+    "coordinates": { "lat": 21.1702, "lon": 72.8311 }
+  }
+}
+
+Response:
+{ "message": "User registered", "token": "<jwt-token>" }
+
+
+[POST] /api/auth/login
+→ Login user and return JWT
+
+Request:
+{ "email": "amit@example.com", "password": "secure123" }
+
+Response:
+{ "token": "<jwt-token>", "user": { "name": "Amit", "role": "volunteer" } }
+
+------------------------------------------------------------
+
+JWT Usage:
+Include in header for protected routes:
+Authorization: Bearer <jwt-token>
+
+============================================================
+2. DISASTER PREDICTION (AI SERVICE)
+============================================================
+
+[POST] /predict
+→ Django endpoint to predict disasters based on past CSV data
+
+Request:
+{
+  "location": "Surat",
+  "type": "flood",
+  "dateRange": ["2025-07-10", "2025-07-25"]
+}
+
+Model: CNN / LSTM / Random Forest
+Input: rainfall.csv, temp.csv, wind.csv
+Output:
+{
+  "predictedDisasters": [
+    {
+      "location": "Surat",
+      "type": "flood",
+      "severity": "high",
+      "date": "2025-07-15"
+    }
+  ]
+}
+
+------------------------------------------------------------
+
+[GET] /external/live-disasters
+→ Fetch recent disasters from 3rd-party sources (IMD, NASA)
+
+Response:
+[
+  {
+    "type": "earthquake",
+    "location": "Kutch",
+    "date": "2025-07-10",
+    "magnitude": 6.1,
+    "source": "IMD"
+  }
+]
+
+============================================================
+3. DISASTER MANAGEMENT
+============================================================
+
+[POST] /api/disasters/raise
+→ Raise new predicted disaster
+
+Request:
+{
+  "type": "flood",
+  "location": "Surat",
+  "severity": "high",
+  "predictionDate": "2025-07-15",
+  "raisedBy": "ai"
+}
+
+[GET] /api/disasters
+→ Get all current/past disasters
+
+[GET] /api/disasters/:id
+→ Get specific disaster
+
+============================================================
+4. NOTIFICATIONS (WEB + EMAIL + LLM)
+============================================================
+
+[POST] /api/notifications/broadcast
+→ Trigger socket + email + advice
+
+Request:
+{
+  "type": "flood",
+  "location": "Surat",
+  "severity": "high"
+}
+
+Auto:
+- Emits Socket.io message: `new_disaster_alert`
+- Sends email to all registered users
+- Generates safety advice using GPT API
+
+[GET] /api/notifications/latest
+→ Returns most recent notification
+
+============================================================
+5. VOLUNTEER CONTRIBUTION
+============================================================
+
+[POST] /api/contribute
+→ Volunteer contributes resource
+
+Request:
+{
+  "userId": "uid123",
+  "disasterId": "did123",
+  "item": "food",
+  "quantity": 10
+}
+
+Auto-calculates reward points.
+
+[GET] /api/contributions/user/:userId
+→ View user contribution history
+
+============================================================
+6. POINTS & REWARDS
+============================================================
+
+[GET] /api/users/:userId/points
+→ Return current point total
+
+[GET] /api/rewards
+→ Dummy list of redeemable rewards
+
+============================================================
+7. USER MANAGEMENT
+============================================================
+
+[GET] /api/users/me
+→ Return logged-in user's info (JWT required)
+
+[PATCH] /api/users/:id
+→ Update profile info (admin or self)
+
+[GET] /api/users/nearby/:city
+→ Fetch users in or near a location
+
+============================================================
+8. SAMPLE INPUTS & OUTPUTS
+============================================================
+
+--- Volunteer Contribution Sample ---
+
+Request:
+{
+  "userId": "64abc...",
+  "disasterId": "64def...",
+  "item": "water",
+  "quantity": 5
+}
+
+Response:
+{
+  "message": "Contribution recorded",
+  "pointsEarned": 40,
+  "newTotalPoints": 210
+}
+
+--- Notification Sample ---
+
+{
+  "type": "flood",
+  "location": "Surat",
+  "severity": "high",
+  "message": "⚠️ Heavy flooding expected in Surat. Stay indoors and store clean water.",
+  "createdAt": "2025-07-11T12:00:00Z"
+}
+
+============================================================
+END OF API CONTRACT - CRISIS PULSE
+============================================================
