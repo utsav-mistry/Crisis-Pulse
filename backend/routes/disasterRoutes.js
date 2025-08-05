@@ -1,37 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const Disaster = require('../models/Disaster');
-const verifyToken = require('../middleware/authMiddleware');
+const disasterController = require('../controllers/disasterController');
+const predictDisaster = require('../utils/disasterPrediction');
 
-// [POST] /api/disasters/raise
-router.post('/raise', verifyToken, async (req, res) => {
-    try {
-        const { type, location, severity, predictionDate, source } = req.body;
-        const disaster = await Disaster.create({
-            type,
-            location,
-            severity,
-            predictionDate,
-            source,
-            raisedBy: req.user.id
-        });
-        res.status(201).json(disaster);
-    } catch (err) {
-        res.status(500).json({ error: 'Disaster raise failed' });
-    }
+// Prediction endpoint
+router.post('/predict', (req, res) => {
+    const { state, month } = req.body;
+    if (!state || !month) return res.status(400).json({ message: 'State and month are required.' });
+    const prediction = predictDisaster(state, Number(month));
+    res.json(prediction);
 });
 
-// [GET] /api/disasters
-router.get('/', async (req, res) => {
-    const disasters = await Disaster.find().sort({ predictionDate: -1 });
-    res.json(disasters);
-});
-
-// [GET] /api/disasters/:id
-router.get('/:id', async (req, res) => {
-    const disaster = await Disaster.findById(req.params.id);
-    if (!disaster) return res.status(404).json({ error: 'Disaster not found' });
-    res.json(disaster);
-});
+router.post('/', disasterController.createDisaster);
+router.get('/', disasterController.getDisasters);
+router.get('/:id', disasterController.getDisasterById);
+router.put('/:id', disasterController.updateDisaster);
+router.delete('/:id', disasterController.deleteDisaster);
 
 module.exports = router;

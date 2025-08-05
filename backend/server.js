@@ -19,11 +19,11 @@ app.use(express.json());
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/disasters', require('./routes/disasterRoutes'));
 app.use('/api/contribute', require('./routes/contributionRoutes'));
-// app.use('/api/notifications', require('./routes/notificationRoutes'));
-// app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
 
 // Socket Setup
-// require('./sockets/socketHandler')(io);
+require('./sockets/socketHandler')(io);
 
 // Start Server
 const PORT = process.env.PORT || 5000;

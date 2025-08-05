@@ -1,20 +1,8 @@
-const axios = require('axios');
-
-const getLLMAdvice = async (type, city) => {
-    const prompt = `Give 2-3 short safety tips for people in ${city} if a ${type} is about to happen.`;
-
-    try {
-        const response = await axios.post('http://localhost:11434/api/chat', {
-            model: 'mistral',
-            messages: [{ role: 'user', content: prompt }],
-            stream: false
-        });
-
-        return response.data.message.content.trim();
-    } catch (err) {
-        console.error('LLM advice error (Ollama/Mistral):', err.message);
-        return 'Stay alert and follow official safety instructions from your local authority.';
-    }
+// Placeholder for AI advice (swap for OpenAI or other LLM as needed)
+module.exports = async function getLLMAdvice(type, city, severity = 'medium') {
+    let advice = `For a ${severity} ${type} in ${city}, stay alert and follow official instructions.`;
+    if (type === 'flood') advice += ' Move to higher ground if necessary.';
+    if (type === 'drought') advice += ' Conserve water and stay hydrated.';
+    if (type === 'earthquake') advice += ' Drop, cover, and hold on until the shaking stops.';
+    return advice;
 };
-
-module.exports = getLLMAdvice;
