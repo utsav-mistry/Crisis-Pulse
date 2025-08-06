@@ -33,7 +33,8 @@ const Layout = () => {
         }
     };
 
-    const navigation = [
+    // Base navigation for all users
+    const baseNavigation = [
         { name: 'Dashboard', href: '/', icon: Home },
         { name: 'Disasters', href: '/disasters', icon: AlertTriangle },
         { name: 'Predictions', href: '/predictions', icon: TrendingUp },
@@ -41,11 +42,30 @@ const Layout = () => {
         { name: 'Alerts', href: '/alerts', icon: Bell },
         { name: 'Profile', href: '/profile', icon: User },
     ];
+    
+    // Admin-specific navigation
+    const adminNavigation = [
+        { name: 'Admin Dashboard', href: '/admin', icon: Shield },
+    ];
+    
+    // Volunteer-specific navigation
+    const volunteerNavigation = [
+        { name: 'Volunteer Dashboard', href: '/volunteer', icon: Heart },
+        { name: 'Log Help', href: '/volunteer/log-help', icon: Activity },
+    ];
+    
+    // Combine navigation based on user role
+    const navigation = [...baseNavigation];
+    
+    if (user?.role === 'admin') {
+        navigation.push(...adminNavigation);
+    } else if (user?.role === 'volunteer') {
+        navigation.push(...volunteerNavigation);
+    }
 
     const getRoleBadge = (role) => {
         const roleConfig = {
             volunteer: { color: 'badge-safety', text: 'Volunteer' },
-            crpf: { color: 'badge-warning', text: 'CRPF' },
             admin: { color: 'badge-emergency', text: 'Admin' },
         };
         const config = roleConfig[role] || { color: 'badge-neutral', text: role };
@@ -184,4 +204,4 @@ const Layout = () => {
     );
 };
 
-export default Layout; 
+export default Layout;

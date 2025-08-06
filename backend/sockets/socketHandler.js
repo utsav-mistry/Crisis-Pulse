@@ -13,9 +13,22 @@ module.exports = (io) => {
         });
 
         // Join user-specific room
-        socket.on('join_user', (userId) => {
+        socket.on('join_user', (userData) => {
+            const { userId, role } = userData;
             socket.join(`user_${userId}`);
             console.log(`User joined personal room: ${userId}`);
+            
+            // If user is admin, join admin room
+            if (role === 'admin') {
+                socket.join('role_admin');
+                console.log(`Admin user joined admin room: ${userId}`);
+            }
+        });
+        
+        // Join public notifications room for non-logged in users
+        socket.on('join_public_notifications', () => {
+            socket.join('public_notifications');
+            console.log(`User joined public notifications room: ${socket.id}`);
         });
 
         // Handle disaster alerts
@@ -33,6 +46,16 @@ module.exports = (io) => {
 
                 // Broadcast to all users
                 io.emit('new_disaster_alert', {
+                    id: notification._id,
+                    type: data.type,
+                    location: data.location,
+                    severity: data.severity,
+                    message: data.message,
+                    timestamp: new Date()
+                });
+                
+                // Also send to public notifications room for non-logged in users
+                io.to('public_notifications').emit('new_disaster_alert', {
                     id: notification._id,
                     type: data.type,
                     location: data.location,
@@ -112,13 +135,69 @@ module.exports = (io) => {
             });
             await notification.save();
 
+            // Determine if this is a test or predicted disaster
+            const isTestOrPredicted = disasterData.source === 'manual' || disasterData.predictionDate;
+            
+            // Broadcast to all connected users
             io.emit('new_disaster_alert', {
                 id: notification._id,
                 ...disasterData,
-                timestamp: new Date()
+                timestamp: new Date(),
+                isTest: disasterData.source === 'manual'
             });
+            
+            // Specifically target public_notifications room for non-logged in users who have allowed notifications
+            io.to('public_notifications').emit('new_disaster_alert', {
+                id: notification._id,
+                ...disasterData,
+                timestamp: new Date(),
+                isTest: disasterData.source === 'manual'
+            });
+            
+            // If this is a high severity disaster, send an extreme alert to admins
+            if (disasterData.severity === 'high') {
+                io.to('role_admin').emit('extreme_disaster_alert', {
+                    id: notification._id,
+                    ...disasterData,
+                    timestamp: new Date(),
+                    requiresCrpfNotification: true
+                });
+            }
+            
+            // If this is a test or predicted disaster, also notify volunteers
+            // so they can sign up to help
+            if (isTestOrPredicted) {
+                // Find all users with volunteer role
+                const volunteers = await User.find({ role: 'volunteer', isBanned: { $ne: true } });
+                
+                // Send notification to each volunteer
+                for (const volunteer of volunteers) {
+                    io.to(`user_${volunteer._id}`).emit('volunteer_help_opportunity', {
+                        disasterId: notification._id,
+                        type: disasterData.type,
+                        location: disasterData.location,
+                        severity: disasterData.severity,
+                        message: `${disasterData.message} - Volunteers needed!`,
+                        timestamp: new Date()
+                    });
+                }
+            }
         } catch (error) {
             console.error('Error in global broadcast:', error);
         }
     };
-}; 
+    
+    // Global function to notify admins about extreme disasters
+    global.notifyAdminsOfExtremeDisaster = async (disasterId, disasterData) => {
+        try {
+            io.to('role_admin').emit('extreme_disaster_alert', {
+                disasterId,
+                ...disasterData,
+                timestamp: new Date(),
+                requiresCrpfNotification: true
+            });
+        } catch (error) {
+            console.error('Error notifying admins of extreme disaster:', error);
+        }
+    };
+};

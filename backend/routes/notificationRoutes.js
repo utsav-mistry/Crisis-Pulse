@@ -20,4 +20,8 @@ router.get('/:id', notificationController.getNotificationById);
 router.put('/:id', notificationController.updateNotification);
 router.delete('/:id', notificationController.deleteNotification);
 
+// Public endpoints (no auth required)
+router.get('/public/latest', notificationController.getLatestPublicNotifications);
+router.post('/broadcast', notificationController.broadcastNotification);
+
 module.exports = router;

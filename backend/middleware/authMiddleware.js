@@ -31,12 +31,4 @@ const requireAdmin = async (req, res, next) => {
     next();
 };
 
-// CRPF-only middleware
-const requireCRPF = async (req, res, next) => {
-    if (req.user.role !== 'crpf' && req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Access denied. CRPF role required.' });
-    }
-    next();
-};
-
-module.exports = { authMiddleware, requireAdmin, requireCRPF };
+module.exports = { authMiddleware, requireAdmin };

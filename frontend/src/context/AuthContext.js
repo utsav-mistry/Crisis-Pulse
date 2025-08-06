@@ -99,8 +99,6 @@ export const AuthProvider = ({ children }) => {
             // Redirect based on user role
             if (user.role === 'admin') {
                 navigate('/admin');
-            } else if (user.role === 'crpf') {
-                navigate('/crpf-dashboard');
             } else {
                 navigate('/dashboard');
             }
@@ -161,4 +159,4 @@ export const useAuth = () => {
         throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
-}; 
+};

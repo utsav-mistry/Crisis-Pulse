@@ -12,6 +12,15 @@ import Predictions from './pages/Predictions';
 import Contributions from './pages/Contributions';
 import Profile from './pages/Profile';
 import Alerts from './pages/Alerts';
+import TestDisaster from './pages/Admin/TestDisaster';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import CrpfNotifications from './pages/Admin/CrpfNotifications';
+import VolunteerHelpVerification from './pages/Admin/VolunteerHelpVerification';
+import VolunteerDashboard from './pages/Volunteer/VolunteerDashboard';
+import LogHelp from './pages/Volunteer/LogHelp';
+import SignUpForHelp from './pages/Volunteer/SignUpForHelp';
+import HelpLogDetail from './pages/Volunteer/HelpLogDetail';
+import NotificationSubscribe from './components/NotificationSubscribe';
 import './index.css';
 
 function App() {
@@ -33,6 +42,17 @@ function App() {
                                 <Route path="contributions" element={<Contributions />} />
                                 <Route path="alerts" element={<Alerts />} />
                                 <Route path="profile" element={<Profile />} />
+                                {/* Admin Routes */}
+                                <Route path="admin" element={<AdminDashboard />} />
+                                <Route path="admin/test" element={<TestDisaster />} />
+                                <Route path="admin/crpf-notifications" element={<CrpfNotifications />} />
+                                <Route path="admin/volunteer-verification" element={<VolunteerHelpVerification />} />
+                                
+                                {/* Volunteer Routes */}
+                                <Route path="volunteer" element={<VolunteerDashboard />} />
+                                <Route path="volunteer/log-help" element={<LogHelp />} />
+                                <Route path="volunteer/sign-up" element={<SignUpForHelp />} />
+                                <Route path="volunteer/help-log/:id" element={<HelpLogDetail />} />
                             </Route>
                         </Routes>
 
@@ -62,6 +82,9 @@ function App() {
                                 },
                             }}
                         />
+                        
+                        {/* Notification Subscribe Button for Non-Logged In Users */}
+                        <NotificationSubscribe />
                     </div>
                 </Router>
             </SocketProvider>
@@ -69,4 +92,4 @@ function App() {
     );
 }
 
-export default App; 
+export default App;
