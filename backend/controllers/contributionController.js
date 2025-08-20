@@ -1,12 +1,44 @@
 const Contribution = require('../models/Contribution');
+const { broadcastDisasterAlert } = require('../sockets/socketHandler');
+const { awardPoints, POINT_VALUES } = require('./pointsController');
 
 // Create a new contribution
 exports.createContribution = async (req, res) => {
     try {
-        const { userId, disasterId, item, quantity, pointsEarned } = req.body;
-        const contribution = new Contribution({ userId, disasterId, item, quantity, pointsEarned });
+        const userId = req.user._id;
+        const { disasterId, item, quantity, category, deliveryMethod, contactInfo } = req.body;
+        
+        const contribution = new Contribution({ 
+            userId, 
+            disasterId, 
+            item, 
+            quantity, 
+            category,
+            deliveryMethod,
+            contactInfo
+        });
         await contribution.save();
-        res.status(201).json(contribution);
+        
+        // Award points for contribution
+        const pointsAwarded = await awardPoints(userId, 'CONTRIBUTION');
+        
+        res.status(201).json({
+            ...contribution.toObject(),
+            pointsAwarded
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Get user contributions
+exports.getUserContributions = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const contributions = await Contribution.find({ userId })
+            .populate('disasterId', 'title type location severity')
+            .sort({ createdAt: -1 });
+        res.json(contributions);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

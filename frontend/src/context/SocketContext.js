@@ -6,8 +6,6 @@ import ExtremeDisasterAlert from '../components/Admin/ExtremeDisasterAlert';
 
 const SocketContext = createContext();
 
-useSocket = () => useContext(SocketContext);
-
 export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);

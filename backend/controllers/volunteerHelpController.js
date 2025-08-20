@@ -1,5 +1,7 @@
 const VolunteerHelp = require('../models/VolunteerHelp');
+const Disaster = require('../models/Disaster');
 const User = require('../models/User');
+const { awardPoints, POINT_VALUES } = require('./pointsController');
 const { broadcastPointsUpdated } = require('../sockets/socketHandler');
 
 // Helper function to check and expire volunteer help tickets
@@ -207,14 +209,13 @@ exports.verifyVolunteerHelp = async (req, res) => {
 
         // If verified, award points to the volunteer
         if (status === 'verified') {
-            const pointsToAward = volunteerHelp.foodPacketsDistributed * 10; // 10 points per food packet
+            const pointsAwarded = await awardPoints(volunteerHelp.volunteerId, 'VOLUNTEER_HELP', 5); // Bonus for verification
             
-            const volunteer = await User.findById(volunteerHelp.volunteerId);
-            volunteer.points += pointsToAward;
-            await volunteer.save();
-
             // Broadcast points update via socket
-            broadcastPointsUpdated(volunteerHelp.volunteerId, volunteer.points);
+            if (pointsAwarded > 0) {
+                const volunteer = await User.findById(volunteerHelp.volunteerId);
+                broadcastPointsUpdated(volunteerHelp.volunteerId, volunteer.points);
+            }
         }
 
         res.status(200).json({

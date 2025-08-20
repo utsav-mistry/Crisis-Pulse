@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const crpfNotificationController = require('../controllers/crpfNotificationController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { authorize } = require('../middleware/authMiddleware');
 
-// Apply auth middleware to all routes
-router.use(authMiddleware);
+router.use(authorize);
+
 
 // Get all CRPF notifications (admin only)
 router.get('/', (req, res, next) => {
@@ -37,5 +37,13 @@ router.put('/:id/status', (req, res, next) => {
     }
     next();
 }, crpfNotificationController.updateCrpfNotificationStatus);
+
+// Create manual CRPF notification (admin only)
+router.post('/manual', (req, res, next) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+    next();
+}, crpfNotificationController.createManualCrpfNotification);
 
 module.exports = router;

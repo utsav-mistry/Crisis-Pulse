@@ -74,20 +74,21 @@ export const userAPI = {
     delete: (id) => api.delete(`/api/users/${id}`),
 };
 
-// AI Service API (Simplified Django endpoints)
+// AI Service API (Django endpoints on port 8000)
+const aiBaseURL = 'http://localhost:8000/api';
 export const aiAPI = {
-    predictDisaster: (predictionData) => api.post('/api/predict', predictionData),
-    getLLMAdvice: (adviceData) => api.post('/api/llm-advice', adviceData),
+    predictDisaster: (predictionData) => axios.post(`${aiBaseURL}/predict/`, predictionData),
+    getLLMAdvice: (adviceData) => axios.post(`${aiBaseURL}/llm-advice/`, adviceData),
     getWeatherForecast: (location, days = 7) =>
-        api.get('/api/weather/forecast', { params: { location: JSON.stringify(location), days } }),
+        axios.get(`${aiBaseURL}/weather/forecast/`, { params: { location: JSON.stringify(location), days } }),
     getCurrentWeather: (location) =>
-        api.get('/api/weather/current', { params: { location: JSON.stringify(location) } }),
-    getDisasterTrends: () => api.get('/api/analytics/disaster-trends'),
-    riskAssessment: (location) => api.post('/api/analytics/risk-assessment', { location }),
-    getHistoricalDisasters: () => api.get('/api/historical/disasters'),
-    getDisastersByState: (state) => api.get(`/api/historical/disasters/${state}`),
-    healthCheck: () => api.get('/api/health'),
-    serviceStatus: () => api.get('/api/status'),
+        axios.get(`${aiBaseURL}/weather/current/`, { params: { location: JSON.stringify(location) } }),
+    getDisasterTrends: () => axios.get(`${aiBaseURL}/analytics/disaster-trends/`),
+    riskAssessment: (location) => axios.post(`${aiBaseURL}/analytics/risk-assessment/`, { location }),
+    getHistoricalDisasters: () => axios.get(`${aiBaseURL}/historical/disasters/`),
+    getDisastersByState: (state) => axios.get(`${aiBaseURL}/historical/disasters/${state}/`),
+    healthCheck: () => axios.get(`${aiBaseURL}/health/`),
+    serviceStatus: () => axios.get(`${aiBaseURL}/status/`),
 };
 
-export default api; 
+export default api;

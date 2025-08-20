@@ -1,42 +1,63 @@
 const express = require('express');
-const http = require('http');
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
 const cors = require('cors');
+const http = require('http');
 const socketIo = require('socket.io');
-const { scheduleVolunteerHelpCron } = require('./cron/volunteerHelpCron');
+const { apiLimiter, authLimiter } = require('./middleware/rateLimiter');
+require('dotenv').config({ path: './config.env' });
+
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, { cors: { origin: "*" } });
+const io = socketIo(server, {
+    cors: {
+        origin: "http://localhost:3000",
+        methods: ["GET", "POST"]
+    }
+});
 
 // Make io available to the Express app
 app.set('io', io);
 
-dotenv.config();
 require('./config/db')(); // MongoDB connection
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.use('/api', apiLimiter); // Apply rate limiting to all API routes
+app.use('/api/auth', authLimiter); // Stricter rate limiting for auth routes
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/disasters', require('./routes/disasterRoutes'));
-app.use('/api/contribute', require('./routes/contributionRoutes'));
+app.use('/api/contributions', require('./routes/contributionRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/crpf-notifications', require('./routes/crpfNotificationRoutes'));
-app.use('/api/volunteer-help', require('./routes/volunteerHelpRoutes'));
+app.use('/api', require('./routes/aiRoutes')); // AI service routes
+app.use('/api/admin', require('./routes/adminRoutes')); // Admin routes
+app.use('/api/setup', require('./routes/setupRoutes')); // Setup routes
+const volunteerHelpRoutes = require('./routes/volunteerHelpRoutes');
+const crpfNotificationRoutes = require('./routes/crpfNotificationRoutes');
+const pointsRoutes = require('./routes/pointsRoutes');
+app.use('/api/crpf-notifications', crpfNotificationRoutes);
+app.use('/api/volunteer-help', volunteerHelpRoutes);
+app.use('/api/points', pointsRoutes);
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 
 // Socket Setup
 require('./sockets/socketHandler')(io);
 
-// Start Server
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-    console.log(`Crisis Pulse backend running on port ${PORT}`);
-    
-    // Initialize cron jobs
-    scheduleVolunteerHelpCron();
-    console.log('Cron jobs initialized');
-});
+// Export app for testing
+module.exports = app;
+
+// Start Server only if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, () => {
+        console.log(`Crisis Pulse backend running on port ${PORT}`);
+        
+        // Initialize cron jobs
+        const { scheduleVolunteerHelpCron } = require('./cron/volunteerHelpCron');
+        scheduleVolunteerHelpCron();
+        console.log('Cron jobs initialized');
+    });
+}

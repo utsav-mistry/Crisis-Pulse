@@ -5,8 +5,22 @@ const Notification = require('../models/Notification');
 // Create a new disaster
 exports.createDisaster = async (req, res) => {
     try {
-        const { type, location, severity, source, predictionDate, raisedBy, message } = req.body;
-        const disaster = new Disaster({ type, location, severity, source, predictionDate, raisedBy });
+        const { type, location, severity, source, predictionDate, raisedBy, reportedBy, message, title, description, status } = req.body;
+        
+        // Use the authenticated user's ID if raisedBy/reportedBy not provided
+        const userId = raisedBy || reportedBy || req.user?.id;
+        
+        const disaster = new Disaster({ 
+            type, 
+            location, 
+            severity, 
+            source: source || 'manual',
+            predictionDate,
+            raisedBy: userId,
+            title: title || `${severity} ${type} disaster`,
+            description: description || message || `${severity} level ${type} disaster reported in ${location?.city || 'unknown location'}`,
+            status: status || 'active'
+        });
         await disaster.save();
         
         // Create notification for the disaster
@@ -23,9 +37,23 @@ exports.createDisaster = async (req, res) => {
         if (severity === 'high') {
             const crpfNotification = new CrpfNotification({
                 disasterId: disaster._id,
-                notifiedBy: raisedBy
+                notifiedBy: raisedBy,
+                message: `High severity ${type} detected in ${location.city}, ${location.state}. CRPF teams have been automatically alerted.`,
+                priority: 'high',
+                crpfUnits: [
+                    'CRPF Battalion 123 - Delhi',
+                    'CRPF Battalion 456 - Mumbai', 
+                    'Emergency Response Team Alpha'
+                ]
             });
             await crpfNotification.save();
+            
+            // Simulate CRPF notification process
+            setTimeout(async () => {
+                crpfNotification.status = 'notified';
+                crpfNotification.notifiedAt = new Date();
+                await crpfNotification.save();
+            }, 3000);
             
             // Get the socket.io instance from the app
             const io = req.app.get('io');
@@ -38,6 +66,15 @@ exports.createDisaster = async (req, res) => {
                 severity,
                 message: message || `EXTREME ALERT: ${type} disaster in ${location.city}, ${location.state}`,
                 crpfNotificationId: crpfNotification._id,
+                crpfStatus: 'CRPF teams automatically notified',
+                timestamp: new Date()
+            });
+
+            // Broadcast CRPF notification to all users
+            io.emit('crpf_notification', {
+                message: `🚨 CRPF Emergency Response Teams have been notified of high-severity ${type} in ${location.city}`,
+                disasterId: disaster._id,
+                crpfUnits: crpfNotification.crpfUnits,
                 timestamp: new Date()
             });
         }

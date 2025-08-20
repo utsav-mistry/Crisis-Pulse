@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import './AdminStyles.css';
@@ -29,7 +29,12 @@ const VolunteerHelpVerification = () => {
                     endpoint = '/api/volunteer-help/pending';
                 }
 
-                const response = await axios.get(endpoint);
+                const response = await axios.get(endpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
                 let filteredLogs = response.data.data;
 
                 // Filter logs if needed (for verified/rejected tabs)
@@ -55,7 +60,12 @@ const VolunteerHelpVerification = () => {
 
     const handleVerify = async (id, status) => {
         try {
-            await axios.put(`/api/volunteer-help/${id}/verify`, { status });
+            await axios.put(`/api/volunteer-help/${id}/verify`, { status }, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             toast.success(`Volunteer help log has been ${status}`);
             
             // Update the help log status in the list

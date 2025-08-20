@@ -62,6 +62,8 @@ export const AuthProvider = ({ children }) => {
         const checkAuth = async () => {
             const token = localStorage.getItem('token');
             if (token) {
+                // Set the token in api defaults immediately
+                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                 try {
                     const response = await api.get('/api/users/me');
                     dispatch({
@@ -70,6 +72,7 @@ export const AuthProvider = ({ children }) => {
                     });
                 } catch (error) {
                     localStorage.removeItem('token');
+                    delete api.defaults.headers.common['Authorization'];
                     dispatch({ type: 'LOGIN_FAILURE' });
                 }
             } else {

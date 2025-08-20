@@ -118,6 +118,130 @@ module.exports = (io) => {
             });
         });
 
+        // Handle admin test notifications
+        socket.on('admin-test-notification', (data) => {
+            io.emit('admin_test_notification', {
+                message: data.message,
+                adminName: data.adminName,
+                timestamp: new Date()
+            });
+        });
+
+        // Handle emergency alerts from admin
+        socket.on('emergency-alert', (data) => {
+            io.emit('emergency_alert', {
+                message: data.message,
+                severity: data.severity,
+                adminName: data.adminName,
+                timestamp: new Date()
+            });
+        });
+
+        // Handle admin broadcast notifications
+        socket.on('admin-broadcast', (data) => {
+            // Send to all connected users
+            io.emit('admin_notification', {
+                type: data.type,
+                message: data.message,
+                adminName: data.adminName,
+                timestamp: data.timestamp
+            });
+            
+            // Also send to public notifications room
+            io.to('public_notifications').emit('admin_notification', {
+                type: data.type,
+                message: data.message,
+                adminName: data.adminName,
+                timestamp: data.timestamp
+            });
+        });
+
+        // Handle emergency broadcast from admin
+        socket.on('emergency-broadcast', (data) => {
+            console.log('Emergency broadcast from admin:', data);
+            
+            // Broadcast to all connected users
+            io.emit('notification', {
+                type: 'emergency',
+                title: 'EMERGENCY ALERT',
+                message: data.message,
+                severity: 'extreme',
+                adminName: data.adminName,
+                timestamp: data.timestamp
+            });
+
+            // Also send to public notifications room for non-logged-in users
+            io.to('public_notifications').emit('notification', {
+                type: 'emergency',
+                title: 'EMERGENCY ALERT',
+                message: data.message,
+                severity: 'extreme',
+                adminName: data.adminName,
+                timestamp: data.timestamp
+            });
+        });
+
+        // Handle severity-based notifications from admin
+        socket.on('severity-notification', (data) => {
+            console.log('Severity notification from admin:', data);
+            
+            // Broadcast to all connected users
+            io.emit('notification', {
+                type: 'severity',
+                title: data.title,
+                message: data.message,
+                severity: data.severity,
+                adminName: data.adminName,
+                timestamp: data.timestamp
+            });
+
+            // Also send to public notifications room for non-logged-in users
+            io.to('public_notifications').emit('notification', {
+                type: 'severity',
+                title: data.title,
+                message: data.message,
+                severity: data.severity,
+                adminName: data.adminName,
+                timestamp: data.timestamp
+            });
+        });
+
+
+        // Handle CRPF notifications
+        socket.on('crpf-notification', (data) => {
+            // Send to all admins
+            io.to('role_admin').emit('crpf_notification', {
+                title: data.title,
+                message: data.message,
+                priority: data.priority,
+                adminName: data.adminName,
+                timestamp: data.timestamp
+            });
+        });
+
+        // Handle disaster alerts from test panel
+        socket.on('disaster-alert', (data) => {
+            // Send to all connected users
+            io.emit('disaster_alert', {
+                type: data.type,
+                severity: data.severity,
+                location: data.location,
+                message: data.message,
+                adminTest: data.adminTest,
+                timestamp: new Date()
+            });
+            
+            // Also send to public notifications room
+            io.to('public_notifications').emit('disaster_alert', {
+                type: data.type,
+                severity: data.severity,
+                location: data.location,
+                message: data.message,
+                adminTest: data.adminTest,
+                timestamp: new Date()
+            });
+        });
+
         socket.on('disconnect', () => {
             console.log('User disconnected:', socket.id);
         });

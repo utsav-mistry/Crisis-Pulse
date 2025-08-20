@@ -1,58 +1,127 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+
+// Context
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+
+// Components
 import Layout from './components/Layout/Layout';
-import Dashboard from './pages/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute';
+import GlobalAlert from './components/GlobalAlert';
+import NotificationSubscribe from './components/NotificationSubscribe';
+
+// Auth Pages
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
-import Disasters from './pages/Disasters';
-import Predictions from './pages/Predictions';
-import Contributions from './pages/Contributions';
+
+// Setup Pages
+import AdminSetup from './pages/Setup/AdminSetup';
+
+// Main Pages
+import Landing from './pages/Landing';
+import Dashboard from './pages/Dashboard';
+import DisasterFeed from './pages/DisasterFeed';
+import SafetyCenter from './pages/SafetyCenter';
 import Profile from './pages/Profile';
-import Alerts from './pages/Alerts';
-import TestDisaster from './pages/Admin/TestDisaster';
+import Contributions from './pages/Contributions';
+import Leaderboard from './pages/Leaderboard';
+import Disasters from './pages/Disasters';
+
+// Admin Pages
 import AdminDashboard from './pages/Admin/AdminDashboard';
+import AdminTestPanel from './pages/Admin/AdminTestPanel';
 import CrpfNotifications from './pages/Admin/CrpfNotifications';
 import VolunteerHelpVerification from './pages/Admin/VolunteerHelpVerification';
-import VolunteerDashboard from './pages/Volunteer/VolunteerDashboard';
+import UserManagement from './pages/Admin/UserManagement';
+
+// Volunteer Pages
 import LogHelp from './pages/Volunteer/LogHelp';
-import SignUpForHelp from './pages/Volunteer/SignUpForHelp';
 import HelpLogDetail from './pages/Volunteer/HelpLogDetail';
-import NotificationSubscribe from './components/NotificationSubscribe';
+import SignUpForHelp from './pages/Volunteer/SignUpForHelp';
+
+// Styles
 import './index.css';
 
 function App() {
     return (
-        <AuthProvider>
-            <SocketProvider>
-                <Router>
+        <Router>
+            <AuthProvider>
+                <SocketProvider>
                     <div className="min-h-screen bg-neutral-50">
                         <Routes>
-                            {/* Auth Routes */}
+                            {/* Public Routes */}
+                            <Route path="/" element={<Landing />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
+                            <Route path="/setup/admin" element={<AdminSetup />} />
 
-                            {/* Protected Routes */}
-                            <Route path="/" element={<Layout />}>
-                                <Route index element={<Dashboard />} />
-                                <Route path="disasters" element={<Disasters />} />
-                                <Route path="predictions" element={<Predictions />} />
-                                <Route path="contributions" element={<Contributions />} />
-                                <Route path="alerts" element={<Alerts />} />
-                                <Route path="profile" element={<Profile />} />
+                            {/* Layout Routes - All app routes use the same layout */}
+                            <Route path="/*" element={<Layout />}>
+                                {/* Protected Routes */}
+                                <Route path="dashboard" element={
+                                    <ProtectedRoute>
+                                        <Dashboard />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="disaster-feed" element={<DisasterFeed />} />
+                                <Route path="safety-center" element={<SafetyCenter />} />
+                                <Route path="profile" element={
+                                    <ProtectedRoute>
+                                        <Profile />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="contributions" element={
+                                    <ProtectedRoute>
+                                        <Contributions />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="leaderboard" element={<Leaderboard />} />
+                                <Route path="disasters" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <Disasters />
+                                    </ProtectedRoute>
+                                } />
+
                                 {/* Admin Routes */}
-                                <Route path="admin" element={<AdminDashboard />} />
-                                <Route path="admin/test" element={<TestDisaster />} />
-                                <Route path="admin/crpf-notifications" element={<CrpfNotifications />} />
-                                <Route path="admin/volunteer-verification" element={<VolunteerHelpVerification />} />
-                                
+                                <Route path="admin/dashboard" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <AdminDashboard />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="admin/test-panel" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <AdminTestPanel />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="admin/crpf-notifications" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <CrpfNotifications />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="admin/volunteer-verification" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <VolunteerHelpVerification />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="admin/users" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <UserManagement />
+                                    </ProtectedRoute>
+                                } />
+
                                 {/* Volunteer Routes */}
-                                <Route path="volunteer" element={<VolunteerDashboard />} />
-                                <Route path="volunteer/log-help" element={<LogHelp />} />
-                                <Route path="volunteer/sign-up" element={<SignUpForHelp />} />
-                                <Route path="volunteer/help-log/:id" element={<HelpLogDetail />} />
+                                <Route path="volunteer/log-help" element={
+                                    <ProtectedRoute requiredRole="volunteer">
+                                        <LogHelp />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="volunteer/help-log/:id" element={
+                                    <ProtectedRoute requiredRole="volunteer">
+                                        <HelpLogDetail />
+                                    </ProtectedRoute>
+                                } />
                             </Route>
                         </Routes>
 
@@ -83,12 +152,15 @@ function App() {
                             }}
                         />
                         
+                        {/* Global Alert Component */}
+                        <GlobalAlert />
+                        
                         {/* Notification Subscribe Button for Non-Logged In Users */}
                         <NotificationSubscribe />
                     </div>
-                </Router>
-            </SocketProvider>
-        </AuthProvider>
+                </SocketProvider>
+            </AuthProvider>
+        </Router>
     );
 }
 

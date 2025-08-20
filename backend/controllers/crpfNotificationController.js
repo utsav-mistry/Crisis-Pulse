@@ -59,3 +59,76 @@ exports.getPendingCrpfNotifications = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+// Create manual CRPF notification
+exports.createManualCrpfNotification = async (req, res) => {
+    try {
+        const { title, message, priority } = req.body;
+        
+        if (!title || !message) {
+            return res.status(400).json({ message: 'Title and message are required' });
+        }
+
+        const crpfNotification = new CrpfNotification({
+            disasterId: null, // Manual notification doesn't need disaster reference
+            notifiedBy: req.user._id,
+            status: 'pending',
+            message: message,
+            title: title,
+            priority: priority || 'medium',
+            crpfUnits: [
+                'CRPF Battalion 123 - Delhi',
+                'CRPF Battalion 456 - Mumbai',
+                'Emergency Response Team Alpha'
+            ]
+        });
+
+        await crpfNotification.save();
+        
+        const populatedNotification = await CrpfNotification.findById(crpfNotification._id)
+            .populate('notifiedBy', 'name email');
+
+        res.status(201).json(populatedNotification);
+    } catch (error) {
+        console.error('Error creating manual CRPF notification:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Create dummy CRPF notification for high-severity disasters
+exports.createCrpfNotification = async (disasterId, notifiedBy) => {
+    try {
+        const disaster = await Disaster.findById(disasterId);
+        if (!disaster) return null;
+
+        // Only create CRPF notification for high severity disasters
+        if (disaster.severity !== 'high') return null;
+
+        const crpfNotification = new CrpfNotification({
+            disasterId: disasterId,
+            notifiedBy: notifiedBy,
+            status: 'pending',
+            message: `High severity ${disaster.type} detected in ${disaster.location.city}, ${disaster.location.state}. CRPF teams have been automatically alerted.`,
+            priority: 'high',
+            crpfUnits: [
+                'CRPF Battalion 123 - Delhi',
+                'CRPF Battalion 456 - Mumbai',
+                'Emergency Response Team Alpha'
+            ]
+        });
+
+        await crpfNotification.save();
+
+        // Simulate CRPF notification process
+        setTimeout(async () => {
+            crpfNotification.status = 'notified';
+            crpfNotification.notifiedAt = new Date();
+            await crpfNotification.save();
+        }, 2000); // 2 second delay to simulate notification process
+
+        return crpfNotification;
+    } catch (error) {
+        console.error('Error creating CRPF notification:', error);
+        return null;
+    }
+};

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import axios from 'axios';
 import './AdminStyles.css';
 
@@ -25,8 +25,11 @@ const CrpfNotifications = () => {
         const fetchNotifications = async () => {
             try {
                 setLoading(true);
+                const token = localStorage.getItem('token');
                 const endpoint = activeTab === 'pending' ? '/api/crpf-notifications/pending' : '/api/crpf-notifications';
-                const response = await axios.get(endpoint);
+                const response = await axios.get(endpoint, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
                 setNotifications(response.data);
                 setLoading(false);
             } catch (error) {
@@ -44,20 +47,30 @@ const CrpfNotifications = () => {
     // Handle notification to CRPF
     const handleNotifyCrpf = async (id) => {
         try {
-            await axios.put(`/api/crpf-notifications/${id}/status`, { status: 'notified' });
-            toast.success('CRPF has been notified');
+            const token = localStorage.getItem('token');
+            const response = await axios.put(`/api/crpf-notifications/${id}/status`, { status: 'notified' }, {
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             
-            // Update the notification status in the list
-            setNotifications(prev => 
-                prev.map(notification => 
-                    notification._id === id 
-                        ? { ...notification, status: 'notified' } 
-                        : notification
-                )
-            );
+            if (response.status === 200) {
+                toast.success('CRPF has been notified successfully');
+                
+                // Update the notification status in the list
+                setNotifications(prev => 
+                    prev.map(notification => 
+                        notification._id === id 
+                            ? { ...notification, status: 'notified', notifiedAt: new Date() } 
+                            : notification
+                    )
+                );
+            }
         } catch (error) {
             console.error('Error notifying CRPF:', error);
-            toast.error('Failed to notify CRPF');
+            const errorMessage = error.response?.data?.message || 'Failed to notify CRPF';
+            toast.error(errorMessage);
         }
     };
 

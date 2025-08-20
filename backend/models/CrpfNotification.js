@@ -4,7 +4,7 @@ const crpfNotificationSchema = new mongoose.Schema({
     disasterId: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Disaster', 
-        required: true 
+        required: false // Allow manual notifications without disaster reference
     },
     notifiedBy: { 
         type: mongoose.Schema.Types.ObjectId, 
@@ -16,6 +16,22 @@ const crpfNotificationSchema = new mongoose.Schema({
         enum: ['pending', 'notified'], 
         default: 'pending' 
     },
+    title: {
+        type: String,
+        required: false // For manual notifications
+    },
+    message: {
+        type: String,
+        required: true
+    },
+    priority: {
+        type: String,
+        enum: ['low', 'medium', 'high'],
+        default: 'medium'
+    },
+    crpfUnits: [{
+        type: String
+    }],
     notifiedAt: { 
         type: Date, 
         default: null 

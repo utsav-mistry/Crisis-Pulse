@@ -1,20 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const disasterController = require('../controllers/disasterController');
-const predictDisaster = require('../utils/disasterPrediction');
+const { authMiddleware } = require('../middleware/authMiddleware');
 
-// Prediction endpoint
-router.post('/predict', (req, res) => {
-    const { state, month } = req.body;
-    if (!state || !month) return res.status(400).json({ message: 'State and month are required.' });
-    const prediction = predictDisaster(state, Number(month));
-    res.json(prediction);
-});
-
-router.post('/', disasterController.createDisaster);
+// GET /api/disasters - Get all disasters
 router.get('/', disasterController.getDisasters);
+
+// POST /api/disasters - Create disaster (matching test expectations)
+router.post('/', authMiddleware, disasterController.createDisaster);
+
+// POST /api/disasters/raise - Create disaster alert (matching README spec)
+router.post('/raise', authMiddleware, disasterController.createDisaster);
+
+// GET /api/disasters/:id - Get specific disaster
 router.get('/:id', disasterController.getDisasterById);
-router.put('/:id', disasterController.updateDisaster);
-router.delete('/:id', disasterController.deleteDisaster);
+
+// PUT /api/disasters/:id - Update disaster (admin only)
+router.put('/:id', authMiddleware, disasterController.updateDisaster);
+
+// DELETE /api/disasters/:id - Delete disaster (admin only)
+router.delete('/:id', authMiddleware, disasterController.deleteDisaster);
 
 module.exports = router;

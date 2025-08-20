@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Shield, Eye, EyeOff, AlertTriangle } from 'lucide-react';
@@ -11,8 +11,19 @@ const Login = () => {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const { login } = useAuth();
+    const { login, user, isAuthenticated } = useAuth();
     const navigate = useNavigate();
+
+    // Redirect if user is already logged in
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            if (user.role === 'admin') {
+                navigate('/admin/dashboard');
+            } else {
+                navigate('/dashboard');
+            }
+        }
+    }, [isAuthenticated, user, navigate]);
 
     const handleChange = (e) => {
         setFormData({
@@ -42,7 +53,7 @@ const Login = () => {
                 {/* Header */}
                 <div className="text-center">
                     <div className="flex justify-center">
-                        <div className="w-16 h-16 bg-emergency-600 rounded-sharp-lg flex items-center justify-center shadow-sharp-lg">
+                        <div className="w-16 h-16 bg-gradient-to-r from-red-600 to-red-700 rounded-xl flex items-center justify-center shadow-lg">
                             <Shield className="w-8 h-8 text-white" />
                         </div>
                     </div>
@@ -58,8 +69,8 @@ const Login = () => {
                 </div>
 
                 {/* Login Form */}
-                <div className="card">
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="bg-white rounded-xl border border-neutral-200 shadow-sm">
+                    <form onSubmit={handleSubmit} className="space-y-6 p-8">
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
                                 Email Address
@@ -113,7 +124,7 @@ const Login = () => {
                                     id="remember-me"
                                     name="remember-me"
                                     type="checkbox"
-                                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-neutral-300 rounded-sharp"
+                                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-neutral-300 rounded"
                                 />
                                 <label htmlFor="remember-me" className="ml-2 block text-sm text-neutral-700">
                                     Remember me
