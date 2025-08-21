@@ -1,0 +1,25 @@
+{
+  "model": "RandomForestClassifier",
+  "trained_at": "2025-08-21T05:10:44.252396Z",
+  "features": [
+    "temperature",
+    "humidity",
+    "rainfall",
+    "wind_speed",
+    "soil_moisture",
+    "seismic_activity",
+    "sat_fire_index",
+    "drought_index",
+    "pressure",
+    "cloud_cover"
+  ],
+  "classes": [
+    "none",
+    "flood",
+    "cyclone",
+    "wildfire",
+    "earthquake",
+    "drought"
+  ],
+  "accuracy": 0.9917
+}
