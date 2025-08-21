@@ -11,9 +11,14 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env at project root
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
@@ -38,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    'api',
+    'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -137,3 +142,15 @@ REST_FRAMEWORK = {
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
+# ----------------------
+# AI Pipeline settings
+# ----------------------
+# Interval to fetch live data and run predictions (minutes)
+PIPELINE_FETCH_INTERVAL_MINUTES = int(os.getenv('PIPELINE_FETCH_INTERVAL_MINUTES', '60'))
+
+# Probability threshold (0-1) above which a non-"none" class is considered risk
+PIPELINE_RISK_THRESHOLD = float(os.getenv('PIPELINE_RISK_THRESHOLD', '0.7'))
+
+# Optional external API keys
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')
