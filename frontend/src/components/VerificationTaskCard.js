@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 
 const VerificationTaskCard = ({ task, onVerify }) => {
     const [feedback, setFeedback] = useState('');
@@ -6,7 +7,7 @@ const VerificationTaskCard = ({ task, onVerify }) => {
 
     const handleVerification = (approved) => {
         if (!approved && !feedback) {
-            alert('Feedback is required for rejecting a submission.');
+            toast.error('Feedback is required for rejecting a submission.');
             return;
         }
         onVerify(task._id, approved, feedback);

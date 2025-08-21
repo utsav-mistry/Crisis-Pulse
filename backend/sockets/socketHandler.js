@@ -35,31 +35,57 @@ module.exports = (io) => {
         if (socket.user.id) {
             connectedUsers.set(socket.user.id, { id: socket.user.id, role: socket.user.role, socketId: socket.id });
             io.to('role_admin').to('role_crpf').emit('user_connected', { userId: socket.user.id, role: socket.user.role });
+            // Notify admins of room data change when user connects
+            io.to('role_admin').emit('room_data_changed');
         }
 
-        // Join user-specific room
+        // Join user-specific room and auto-join location room
         if (socket.user.id) {
             socket.join(`user_${socket.user.id}`);
             console.log(`User ${socket.user.id} joined their personal room.`);
+            
+            // Auto-join user's location room if available
+            User.findById(socket.user.id).then(user => {
+                if (user && user.location && user.location.city && user.location.state) {
+                    const locationRoom = `location_${user.location.city}_${user.location.state}`;
+                    socket.join(locationRoom);
+                    console.log(`User ${socket.user.id} auto-joined location: ${user.location.city}, ${user.location.state}`);
+                    
+                    // Notify admins of room data update
+                    socket.to('role_admin').emit('room_data_changed');
+                }
+            }).catch(err => {
+                console.error('Error fetching user location:', err);
+            });
         }
 
         // Join role-based rooms
         if (socket.user.role === 'admin') {
             socket.join('role_admin');
             console.log(`Admin user ${socket.user.id} joined admin room.`);
+            // Notify about room data change
+            socket.to('role_admin').emit('room_data_changed');
         } else if (socket.user.role === 'crpf') {
             socket.join('role_crpf');
             console.log(`CRPF user ${socket.user.id} joined CRPF room.`);
+            // Notify about room data change
+            socket.to('role_admin').emit('room_data_changed');
         } else if (socket.user.role === 'public') {
             socket.join('public_notifications');
             console.log(`Public user ${socket.id} joined public notifications room.`);
+            // Notify about room data change
+            socket.to('role_admin').emit('room_data_changed');
         }
 
         // Join location-based room
         socket.on('join_location', (location) => {
             if (location && location.city && location.state) {
-                socket.join(`location_${location.city}_${location.state}`);
+                const locationRoom = `location_${location.city}_${location.state}`;
+                socket.join(locationRoom);
                 console.log(`User ${socket.id} joined location: ${location.city}, ${location.state}`);
+                
+                // Notify admins of room data update
+                socket.to('role_admin').emit('room_data_changed');
             }
         });
 
@@ -116,21 +142,29 @@ module.exports = (io) => {
 
         // Handle admin broadcast notifications
         socket.on('admin-broadcast', (data) => {
-            // Send to all connected users
-            io.emit('admin_notification', {
-                type: data.type,
-                message: data.message,
-                adminName: data.adminName,
-                timestamp: data.timestamp
-            });
+            console.log('Admin broadcast received:', data);
             
-            // Also send to public notifications room
-            io.to('public_notifications').emit('admin_notification', {
+            const notificationData = {
                 type: data.type,
+                title: data.title,
                 message: data.message,
+                priority: data.priority,
                 adminName: data.adminName,
-                timestamp: data.timestamp
-            });
+                timestamp: data.timestamp,
+                source: data.source
+            };
+            
+            // Send to ALL connected users (logged in and public)
+            io.emit('admin_notification', notificationData);
+            
+            // Specifically send to public notifications room for non-authenticated users
+            io.to('public_notifications').emit('admin_notification', notificationData);
+            
+            // Send to all role-based rooms to ensure coverage
+            io.to('role_admin').emit('admin_notification', notificationData);
+            io.to('role_crpf').emit('admin_notification', notificationData);
+            
+            console.log('Admin broadcast sent to all users and rooms');
         });
 
         // Consolidated emergency broadcast handler
@@ -207,10 +241,12 @@ module.exports = (io) => {
         });
 
         // Handler for admins to request room and user data
-        if (socket.user.role === 'admin') {
-            socket.on('admin_get_rooms', () => {
+        socket.on('admin_get_room_data', () => {
+            
+            try {
                 const rooms = io.sockets.adapter.rooms;
                 const roomData = [];
+                let totalUsers = 0;
 
                 const usersBySocketId = new Map();
                 for (const userData of connectedUsers.values()) {
@@ -218,7 +254,8 @@ module.exports = (io) => {
                 }
 
                 for (const [roomId, socketIds] of rooms.entries()) {
-                    if (roomId.startsWith('user_')) continue; // Skip personal rooms for privacy
+                    // Skip individual socket IDs (they appear as rooms too) but keep all actual rooms
+                    if (socketIds.size === 1 && roomId.length > 10 && !roomId.startsWith('user_') && !roomId.startsWith('location_') && !roomId.startsWith('role_') && roomId !== 'public_notifications') continue;
 
                     const usersInRoom = [];
                     for (const socketId of socketIds) {
@@ -231,17 +268,45 @@ module.exports = (io) => {
                         }
                     }
 
-                    roomData.push({ room: roomId, users: usersInRoom, count: socketIds.size });
+                    // Format room names for better display
+                    let displayName = roomId;
+                    if (roomId.startsWith('user_')) {
+                        const userId = roomId.replace('user_', '');
+                        displayName = `Personal Room (${userId})`;
+                    } else if (roomId.startsWith('location_')) {
+                        displayName = roomId.replace('location_', '').replace(/_/g, ', ');
+                    } else if (roomId === 'role_admin') {
+                        displayName = 'Admin Room';
+                    } else if (roomId === 'role_crpf') {
+                        displayName = 'CRPF Room';
+                    } else if (roomId === 'public_notifications') {
+                        displayName = 'Public Notifications';
+                    }
+
+                    roomData.push({ 
+                        name: displayName, 
+                        users: usersInRoom, 
+                        userCount: socketIds.size 
+                    });
+                    totalUsers += socketIds.size;
                 }
 
-                socket.emit('admin_room_data', roomData);
-            });
-        }
+                socket.emit('room_data_update', { 
+                    rooms: roomData, 
+                    totalUsers: connectedUsers.size 
+                });
+            } catch (error) {
+                console.error('Error getting room data:', error);
+                socket.emit('room_data_update', { error: 'Failed to get room data' });
+            }
+        });
 
         socket.on('disconnect', () => {
             if (socket.user.id) {
                 connectedUsers.delete(socket.user.id);
                 io.to('role_admin').to('role_crpf').emit('user_disconnected', { userId: socket.user.id });
+                // Notify about room data change when user disconnects
+                io.to('role_admin').emit('room_data_changed');
             }
             console.log('User disconnected:', socket.id);
         });

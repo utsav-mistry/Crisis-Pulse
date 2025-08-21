@@ -11,10 +11,22 @@ const userSchema = new mongoose.Schema({
         default: 'user' 
     },
     location: {
-        city: String,
-        state: String
+        city: { type: String },
+        state: { type: String },
+        coordinates: {
+            type: [Number], // [longitude, latitude]
+            index: '2dsphere'
+        }
     },
     points: { type: Number, default: 0 },
+    pushSubscription: {
+        type: Object,
+        default: null
+    },
+    pushEnabled: {
+        type: Boolean,
+        default: false
+    },
     isActive: { type: Boolean, default: true },
     
     // Volunteer-specific fields

@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
 
             toast.success('Login successful!');
-            navigate(userData.role === 'admin' ? '/admin/dashboard' : '/dashboard');
+            navigate(userData.role === 'admin' ? '/app/admin/dashboard' : '/app/dashboard');
         } catch (error) {
             setLoading(false);
             toast.error(error.response?.data?.message || 'Login failed');
@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
 
             toast.success('Registration successful!');
-            navigate('/dashboard');
+            navigate('/app/dashboard');
         } catch (error) {
             setLoading(false);
             toast.error(error.response?.data?.message || 'Registration failed');

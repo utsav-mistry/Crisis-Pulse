@@ -4,21 +4,20 @@ import { useAuth } from '../../context/AuthContext';
 import {
     Home,
     AlertTriangle,
-    TrendingUp,
-    Heart,
-    Bell,
+    Shield,
     Users,
-    UserCheck,
-    User,
+    Heart,
+    LogOut,
     Menu,
     X,
-    LogOut,
-    Shield,
-    MapPin,
-    Trophy,
+    Bell,
+    User,
     Activity,
-    ChevronDown,
-    FileText
+    UserCheck,
+    CheckSquare,
+    Trophy,
+    FileText,
+    ChevronDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import NotificationBell from './NotificationBell';
@@ -45,7 +44,7 @@ const Layout = () => {
         const categories = [
             {
                 name: 'Dashboard',
-                path: '/dashboard',
+                path: '/app/dashboard',
                 icon: Home,
                 single: true
             },
@@ -53,16 +52,16 @@ const Layout = () => {
                 name: 'Disasters',
                 icon: AlertTriangle,
                 items: [
-                    { name: 'Live Feed', path: '/disaster-feed', icon: Activity },
-                    { name: 'Safety Center', path: '/safety-center', icon: Shield },
+                    { name: 'Live Feed', path: '/app/disaster-feed', icon: Activity },
+                    { name: 'Safety Center', path: '/app/safety-center', icon: Shield },
                 ]
             },
             {
                 name: 'Community',
                 icon: Users,
                 items: [
-                    { name: 'Contributions', path: '/contributions', icon: Heart },
-                    { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
+                    ...(user?.role === 'user' || user?.role === 'volunteer' ? [{ name: 'Contributions', path: '/app/contributions', icon: Heart }] : []),
+                    { name: 'Leaderboard', path: '/app/leaderboard', icon: Trophy },
                 ]
             }
         ];
@@ -73,13 +72,16 @@ const Layout = () => {
                 name: 'Admin',
                 icon: Shield,
                 items: [
-                    { name: 'Admin Dashboard', path: '/admin/dashboard', icon: Shield },
-                    { name: 'Test Panel', path: '/admin/test-panel', icon: Activity },
-                    { name: 'Test Logs', path: '/admin/test-logs', icon: FileText },
-                    { name: 'User Management', path: '/admin/users', icon: Users },
-                    { name: 'CRPF Notifications', path: '/admin/crpf-notifications', icon: Bell },
-                    { name: 'Volunteer Verification', path: '/admin/volunteer-verification', icon: UserCheck },
-                    { name: 'Task Verification', path: '/admin/task-verification', icon: UserCheck },
+                    { name: 'Admin Dashboard', path: '/app/admin/dashboard', icon: Shield },
+                    { name: 'Test Panel', path: '/app/admin/test-panel', icon: Activity },
+                    { name: 'Test Logs', path: '/app/admin/test-logs', icon: FileText },
+                    { name: 'Room Management', path: '/app/admin/room-management', icon: Users },
+                    { name: 'Public Notifications', path: '/app/admin/public-notifications', icon: Bell },
+                    { name: 'Profile', path: '/app/profile', icon: User },
+                    { name: 'CRPF Notifications', path: '/app/admin/crpf-notifications', icon: Bell },
+                    { name: 'Volunteer Verification', path: '/app/admin/volunteer-verification', icon: UserCheck },
+                    { name: 'Task Verification', path: '/app/admin/task-verification', icon: UserCheck },
+                    { name: 'Task Management', path: '/app/admin/task-management', icon: CheckSquare },
                 ]
             });
         }
@@ -90,8 +92,9 @@ const Layout = () => {
                 name: 'Volunteer',
                 icon: Heart,
                 items: [
-                    { name: 'Volunteer Dashboard', path: '/volunteer/dashboard', icon: Activity },
-                    { name: 'Log Help', path: '/volunteer/log-help', icon: Heart },
+                    { name: 'Volunteer Dashboard', path: '/app/volunteer/dashboard', icon: Activity },
+                    { name: 'Tasks', path: '/app/volunteer/tasks', icon: CheckSquare },
+                    { name: 'Log Help', path: '/app/volunteer/log-help', icon: Heart },
                 ]
             });
         }

@@ -27,4 +27,5 @@ urlpatterns = [
     # Live feed endpoints
     path('live-feed/start/', views.start_live_feed, name='start_live_feed'),
     path('live-feed/stop/', views.stop_live_feed, name='stop_live_feed'),
+    path('live-feed/predictions/', views.get_live_predictions, name='get_live_predictions'),
 ] 

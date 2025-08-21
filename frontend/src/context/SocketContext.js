@@ -75,6 +75,17 @@ export const SocketProvider = ({ children }) => {
             });
         });
 
+        // Listen for AI predictions from disaster_ai
+        newSocket.on('new-ai-prediction', (data) => {
+            console.log('Received AI prediction:', data);
+            if (data.predictions && data.predictions.length > 0) {
+                const highRiskPredictions = data.predictions.filter(p => p.severity === 'high');
+                if (highRiskPredictions.length > 0) {
+                    toast.warning(`AI Alert: ${highRiskPredictions.length} high-risk disaster(s) predicted`, { duration: 8000 });
+                }
+            }
+        });
+
         // Listen for points updates
         if (isAuthenticated && user) {
             newSocket.on('points_updated', (data) => {

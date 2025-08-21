@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, AlertTriangle, Users, Heart, Trophy, Activity, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Shield, AlertTriangle, Users, Heart, Award, Activity, ArrowRight, CheckCircle, Trophy } from 'lucide-react';
+import api from '../services/api';
 
 const Landing = () => {
     const { user } = useAuth();
@@ -38,8 +39,29 @@ const Landing = () => {
         }
     ];
 
-    // Remove dummy stats - will be replaced with real data
-    const stats = [];
+    const [stats, setStats] = useState({
+        totalUsers: 0,
+        activeDisasters: 0,
+        totalContributions: 0,
+        volunteersActive: 0
+    });
+
+    useEffect(() => {
+        const fetchLandingStats = async () => {
+            try {
+                const response = await api.get('/admin/dashboard/stats');
+                setStats({
+                    totalUsers: response.data.users || 0,
+                    activeDisasters: response.data.activeDisasters || 0,
+                    totalContributions: response.data.contributions || 0,
+                    volunteersActive: response.data.volunteers || 0
+                });
+            } catch (error) {
+                console.error('Error fetching landing stats:', error);
+            }
+        };
+        fetchLandingStats();
+    }, []);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-50">
@@ -55,7 +77,7 @@ const Landing = () => {
                         </div>
                         <div className="flex items-center space-x-4">
                             {user ? (
-                                <Link to={user.role === 'admin' ? '/admin/dashboard' : '/dashboard'} className="btn btn-primary">
+                                <Link to={user.role === 'admin' ? '/app/admin/dashboard' : '/app/dashboard'} className="btn btn-primary">
                                     Go to Dashboard
                                 </Link>
                             ) : (
@@ -91,7 +113,7 @@ const Landing = () => {
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             {user ? (
-                                <Link to={user.role === 'admin' ? '/admin/dashboard' : '/dashboard'} className="btn btn-primary btn-lg">
+                                <Link to={user.role === 'admin' ? '/app/admin/dashboard' : '/app/dashboard'} className="btn btn-primary btn-lg">
                                     Go to Dashboard
                                     <ArrowRight className="w-5 h-5 ml-2" />
                                 </Link>
@@ -101,7 +123,7 @@ const Landing = () => {
                                         Join the Community
                                         <ArrowRight className="w-5 h-5 ml-2" />
                                     </Link>
-                                    <Link to="/disaster-feed" className="btn btn-outline btn-lg">
+                                    <Link to="/app/disaster-feed" className="btn btn-outline btn-lg">
                                         View Live Feed
                                     </Link>
                                 </>
@@ -112,19 +134,25 @@ const Landing = () => {
             </section>
 
             {/* Stats Section */}
-            <section className="py-16 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <section className="py-16 bg-white px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                        {stats.map((stat, index) => (
-                            <div key={index} className="text-center">
-                                <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">
-                                    {stat.value}
-                                </div>
-                                <div className="text-neutral-600 font-medium">
-                                    {stat.label}
-                                </div>
-                            </div>
-                        ))}
+                        <div className="text-center">
+                            <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">{stats.totalUsers}+</div>
+                            <div className="text-neutral-600">Active Users</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">{stats.activeDisasters}+</div>
+                            <div className="text-neutral-600">Active Disasters</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">{stats.totalContributions}+</div>
+                            <div className="text-neutral-600">Contributions</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">{stats.volunteersActive}+</div>
+                            <div className="text-neutral-600">Active Volunteers</div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -250,9 +278,9 @@ const Landing = () => {
                         <div>
                             <h4 className="font-semibold mb-4">Platform</h4>
                             <ul className="space-y-2 text-neutral-400">
-                                <li><Link to="/disaster-feed" className="hover:text-white">Live Disaster Feed</Link></li>
-                                <li><Link to="/leaderboard" className="hover:text-white">Leaderboard</Link></li>
-                                <li><Link to="/safety-center" className="hover:text-white">Safety Center</Link></li>
+                                <li><Link to="/app/disaster-feed" className="hover:text-white">Live Disaster Feed</Link></li>
+                                <li><Link to="/app/leaderboard" className="hover:text-white">Leaderboard</Link></li>
+                                <li><Link to="/app/safety-center" className="hover:text-white">Safety Center</Link></li>
                             </ul>
                         </div>
                         <div>

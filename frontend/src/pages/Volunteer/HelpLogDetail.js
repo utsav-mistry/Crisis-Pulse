@@ -16,7 +16,7 @@ const HelpLogDetail = () => {
     useEffect(() => {
         // Redirect if not volunteer
         if (user && user.role !== 'volunteer') {
-            navigate('/dashboard');
+            navigate('/app/dashboard');
             return;
         }
 
@@ -30,7 +30,7 @@ const HelpLogDetail = () => {
                 console.error('Error fetching help log details:', error);
                 toast.error('Failed to load help log details');
                 setLoading(false);
-                navigate('/volunteer/dashboard');
+                navigate('/app-prefixed/volunteer/dashboard');
             }
         };
 
@@ -66,7 +66,7 @@ const HelpLogDetail = () => {
     return (
         <div className="volunteer-container">
             <div className="back-link">
-                <Link to="/volunteer/dashboard">&larr; Back to Dashboard</Link>
+                <Link to="/app/volunteer/dashboard">&larr; Back to Dashboard</Link>
             </div>
 
             <div className="help-log-detail">

@@ -3,6 +3,36 @@ const User = require('../models/User');
 const Disaster = require('../models/Disaster');
 const { sendNotification } = require('../utils/notificationUtils');
 
+// @desc    Create a new volunteer task (Admin only)
+// @route   POST /api/volunteer-tasks
+// @access  Private (Admin)
+exports.createTask = async (req, res) => {
+    try {
+        const { disaster, description, requiredSkills } = req.body;
+
+        // Validate disaster exists
+        const disasterExists = await Disaster.findById(disaster);
+        if (!disasterExists) {
+            return res.status(404).json({ message: 'Disaster not found' });
+        }
+
+        const task = new VolunteerTask({
+            disaster,
+            description,
+            requiredSkills: requiredSkills || [],
+            status: 'open'
+        });
+
+        await task.save();
+        await task.populate('disaster', 'title type location severity');
+
+        res.status(201).json(task);
+    } catch (error) {
+        console.error('Error creating task:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 // @desc    Get all open volunteer tasks
 // @route   GET /api/volunteer-tasks
 // @access  Private (Volunteer)

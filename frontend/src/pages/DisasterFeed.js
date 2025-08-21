@@ -7,6 +7,7 @@ import {
     Zap,
     TrendingUp
 } from 'lucide-react';
+import { aiAPI } from '../services/api';
 
 const DisasterFeed = () => {
     const [predictions, setPredictions] = useState([]);
@@ -16,46 +17,53 @@ const DisasterFeed = () => {
     useEffect(() => {
         const fetchLivePredictions = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/predict/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        location: { city: 'Global', state: 'Worldwide' },
-                        disaster_type: 'all'
-                    })
+                // Start the live feed if not already running
+                await aiAPI.startLiveFeed().catch(err => {
+                    console.log('Live feed already running or failed to start:', err.response?.data?.message);
                 });
                 
-                if (res.ok) {
-                    const data = await res.json();
-                    console.log('API Response:', data);
-                    
-                    // Handle both live_predictions and predictions array
-                    let predictionsData = [];
-                    if (data.live_predictions) {
-                        predictionsData = data.live_predictions;
-                    } else if (data.predictions) {
-                        predictionsData = data.predictions;
-                    }
-                    
-                    if (predictionsData && predictionsData.length > 0) {
-                        const formattedPredictions = predictionsData.map((p, i) => ({
-                            id: p.id || `${Date.now()}-${i}`,
-                            type: p.type || p.disaster || 'Unknown',
-                            severity: (p.severity || p.risk_level || 'low').toLowerCase(),
+                // Get live predictions from the queue
+                const response = await aiAPI.getLivePredictions();
+                const data = response.data;
+                
+                console.log('Live Predictions Response:', data);
+                
+                const livePredictions = data.live_predictions || [];
+                console.log('Live Predictions from AI Model:', livePredictions);
+                
+                if (livePredictions && livePredictions.length > 0) {
+                    const confidenceToNumeric = (val) => {
+                        if (typeof val === 'number') return val;
+                        if (!val) return undefined;
+                        const s = String(val).toLowerCase();
+                        if (s === 'low') return 0.3;
+                        if (s === 'medium' || s === 'moderate') return 0.6;
+                        if (s === 'high' || s === 'critical') return 0.9;
+                        const n = Number(val);
+                        return isNaN(n) ? undefined : n;
+                    };
+
+                    const formattedPredictions = livePredictions.map((p, i) => {
+                        // Handle the live prediction format from your AI model console output
+                        const accuracyCandidate = p.accuracy || confidenceToNumeric(p.confidence) || confidenceToNumeric(p.risk_level);
+                        const accuracy = typeof accuracyCandidate === 'number' && !isNaN(accuracyCandidate)
+                            ? Math.max(0, Math.min(1, accuracyCandidate))
+                            : undefined;
+
+                        return ({
+                            id: `live-${Date.now()}-${i}`,
+                            type: (p.disaster || p.type || 'Unknown').toLowerCase(),
+                            severity: (p.risk_level || p.severity || 'low').toLowerCase(),
                             location: p.location || 'Unknown Location',
-                            timestamp: new Date(p.timestamp || p.created_at || Date.now()),
-                            accuracy: p.confidence || p.accuracy || p.probability || 0.5,
-                            probability: p.probability || 0.5,
-                            model_used: p.model_used || 'unknown'
-                        }));
-                        setPredictions(formattedPredictions);
-                    }
-                    setError(null);
-                } else {
-                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                            timestamp: new Date(p.timestamp || Date.now()),
+                            accuracy: accuracy,
+                            probability: typeof p.probability === 'number' ? p.probability : undefined,
+                            model_used: 'live_ai_model'
+                        });
+                    });
+                    setPredictions(formattedPredictions);
                 }
+                setError(null);
             } catch (error) {
                 console.error('Error fetching live predictions:', error);
                 setError(`Failed to connect to AI service: ${error.message}`);
@@ -65,7 +73,7 @@ const DisasterFeed = () => {
         };
 
         fetchLivePredictions(); // Initial fetch
-        const intervalId = setInterval(fetchLivePredictions, 10000); // Poll every 10 seconds
+        const intervalId = setInterval(fetchLivePredictions, 5000); // Poll every 5 seconds for real-time updates
 
         return () => clearInterval(intervalId); // Cleanup on component unmount
     }, []);
@@ -172,7 +180,11 @@ const DisasterFeed = () => {
                                                     </div>
                                                     <div className="flex items-center space-x-1.5">
                                                         <TrendingUp className="w-4 h-4" />
-                                                        <span>Accuracy: {(prediction.accuracy * 100).toFixed(2)}%</span>
+                                                        <span>
+                                                            Accuracy: {typeof prediction.accuracy === 'number' && !isNaN(prediction.accuracy)
+                                                                ? `${(prediction.accuracy * 100).toFixed(2)}%`
+                                                                : 'N/A'}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>

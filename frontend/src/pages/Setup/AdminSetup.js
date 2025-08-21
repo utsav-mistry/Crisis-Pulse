@@ -94,7 +94,7 @@ const AdminSetup = () => {
             
             // Redirect to admin dashboard
             setTimeout(() => {
-                navigate('/admin/dashboard');
+                navigate('/app/admin/dashboard');
             }, 1500);
 
         } catch (error) {

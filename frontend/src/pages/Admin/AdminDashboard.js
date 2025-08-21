@@ -22,6 +22,8 @@ import {
 import Analytics from '../../components/Admin/Analytics';
 import StatCard from '../../components/Admin/Dashboard/StatCard';
 import LiveFeed from '../../components/Admin/Dashboard/LiveFeed';
+import RoomManagement from '../../components/Admin/RoomManagement';
+import AccuracyChart from '../../components/Admin/AccuracyChart';
 
 const AdminDashboard = () => {
     const [stats, setStats] = useState({
@@ -52,7 +54,7 @@ const AdminDashboard = () => {
     // Redirect if not admin
     useEffect(() => {
         if (user && user.role !== 'admin') {
-            navigate('/dashboard');
+            navigate('/app/dashboard');
             toast.error('Unauthorized access');
         }
     }, [user, navigate]);
@@ -61,9 +63,7 @@ const AdminDashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const { data } = await api.get('/dashboard/stats', {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                });
+                const { data } = await api.get('/admin/dashboard/stats');
                 setStats(data);
             } catch (error) {
                 console.error('Error fetching stats:', error);
@@ -98,9 +98,7 @@ const AdminDashboard = () => {
 
     const handleAddDisaster = async () => {
         try {
-            const response = await api.post('/disasters/raise', newDisaster, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            const response = await api.post('/disasters/raise', newDisaster);
 
             toast.success('Disaster added successfully');
             setNewDisaster({
@@ -146,16 +144,28 @@ const AdminDashboard = () => {
 
     return (
         <div className="space-y-8">
-            {/* Header */}
-            <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-                <div className="flex items-center justify-between">
+            {/* Enhanced Header */}
+            <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-6 text-white">
+                <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">Admin Dashboard</h1>
-                        <p className="text-neutral-600 mt-1">Manage the Crisis Pulse system and monitor activity</p>
+                        <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
+                        <p className="text-red-100 text-lg">Crisis Pulse System Management</p>
+                        <div className="flex items-center mt-3 space-x-4">
+                            <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                <span className="text-sm text-red-100">All Systems Operational</span>
+                            </div>
+                            <div className="text-sm text-red-100">
+                                Last updated: {new Date().toLocaleTimeString()}
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm text-neutral-600">System Active</span>
+                    <div className="text-right">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 border border-white/30">
+                            <div className="text-sm text-red-100 mb-1">Admin Access</div>
+                            <div className="text-2xl font-bold">{user?.name}</div>
+                            <div className="text-xs text-red-200 mt-1">System Administrator</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -176,6 +186,12 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Analytics stats={stats} />
                 <LiveFeed />
+            </div>
+
+            {/* Room Management and Accuracy Chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <RoomManagement />
+                <AccuracyChart />
             </div>
 
             {/* Quick Actions */}
@@ -290,42 +306,42 @@ const AdminDashboard = () => {
                 <h3 className="text-lg font-semibold text-neutral-900 mb-4">System Management</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <button 
-                        onClick={() => navigate('/admin/crpf-notifications')}
+                        onClick={() => navigate('/app/admin/crpf-notifications')}
                         className="btn btn-outline flex items-center justify-center p-4 h-auto"
                     >
                         <Bell className="w-5 h-5 mr-2" />
                         <span>CRPF Notifications</span>
                     </button>
                     <button 
-                        onClick={() => navigate('/admin/volunteer-verification')}
+                        onClick={() => navigate('/app/admin/volunteer-verification')}
                         className="btn btn-outline flex items-center justify-center p-4 h-auto"
                     >
                         <UserCheck className="w-5 h-5 mr-2" />
                         <span>Verify Volunteers</span>
                     </button>
                     <button 
-                        onClick={() => navigate('/disasters')}
+                        onClick={() => navigate('/app/disasters')}
                         className="btn btn-outline flex items-center justify-center p-4 h-auto"
                     >
                         <MapPin className="w-5 h-5 mr-2" />
                         <span>Manage Disasters</span>
                     </button>
                     <button 
-                        onClick={() => navigate('/leaderboard')}
+                        onClick={() => navigate('/app/leaderboard')}
                         className="btn btn-outline flex items-center justify-center p-4 h-auto"
                     >
                         <TrendingUp className="w-5 h-5 mr-2" />
                         <span>View Leaderboard</span>
                     </button>
                     <button 
-                        onClick={() => navigate('/admin/subscriptions')}
+                        onClick={() => navigate('/app/admin/subscriptions')}
                         className="btn btn-outline flex items-center justify-center p-4 h-auto"
                     >
                         <Users className="w-5 h-5 mr-2" />
                         <span>Subscriptions</span>
                     </button>
                     <button 
-                        onClick={() => navigate('/admin/test-logs')}
+                        onClick={() => navigate('/app/admin/test-logs')}
                         className="btn btn-outline flex items-center justify-center p-4 h-auto"
                     >
                         <FileText className="w-5 h-5 mr-2" />

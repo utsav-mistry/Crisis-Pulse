@@ -40,46 +40,87 @@ def predict_disaster(request):
             status='processing'
         )
         
-        # Placeholder prediction logic (to be replaced with actual ML models)
+        # Enhanced prediction logic with more realistic data
         predictions = []
         confidence_score = 0.0
         
+        # Location-based disaster likelihood mapping
+        location_risks = {
+            'Mumbai': {'flood': 0.8, 'cyclone': 0.7, 'earthquake': 0.3, 'drought': 0.2},
+            'Delhi': {'earthquake': 0.4, 'flood': 0.5, 'drought': 0.6, 'wildfire': 0.3},
+            'Chennai': {'cyclone': 0.9, 'flood': 0.7, 'earthquake': 0.3, 'drought': 0.4},
+            'Kolkata': {'flood': 0.8, 'cyclone': 0.6, 'earthquake': 0.4, 'drought': 0.3},
+            'Bangalore': {'drought': 0.6, 'wildfire': 0.4, 'earthquake': 0.2, 'flood': 0.3},
+            'Ahmedabad': {'earthquake': 0.7, 'drought': 0.8, 'flood': 0.4, 'wildfire': 0.5},
+            'Hyderabad': {'drought': 0.7, 'flood': 0.4, 'earthquake': 0.3, 'wildfire': 0.4},
+            'Pune': {'drought': 0.5, 'flood': 0.4, 'earthquake': 0.3, 'wildfire': 0.3}
+        }
+        
+        # Get location name for risk calculation
+        location_name = location if isinstance(location, str) else location.get('city', 'Unknown')
+        location_risk = location_risks.get(location_name, {})
+        
         if model_preference == 'ensemble':
-            # Simulate ensemble prediction
-            base_probability = random.uniform(0.1, 0.8)
-            confidence_score = random.uniform(0.6, 0.95)
+            # Generate realistic predictions based on location
+            disaster_types = [disaster_type] if disaster_type != 'all' else list(location_risk.keys()) if location_risk else ['flood', 'earthquake', 'drought']
             
-            # Generate multiple predictions
-            for i in range(3):
-                pred_date = timezone.now().date() + timedelta(days=random.randint(1, 30))
+            for disaster in disaster_types[:3]:  # Limit to 3 predictions
+                base_risk = location_risk.get(disaster, random.uniform(0.1, 0.5))
+                probability = min(0.9, base_risk + random.uniform(-0.1, 0.2))
+                confidence_val = random.uniform(0.6, 0.95)
+                
+                # Determine severity based on probability
+                if probability > 0.7:
+                    severity = 'high'
+                elif probability > 0.4:
+                    severity = 'medium'
+                else:
+                    severity = 'low'
+                
+                pred_date = timezone.now().date() + timedelta(days=random.randint(1, 14))
                 prediction = DisasterPrediction.objects.create(
-                    type=disaster_type or random.choice(['flood', 'drought', 'earthquake']),
-                    location=location,
+                    type=disaster,
+                    location=location_name,
                     predicted_date=pred_date,
-                    severity=random.choice(['low', 'medium', 'high']),
-                    confidence=random.choice(['low', 'medium', 'high']),
-                    probability=base_probability + random.uniform(-0.2, 0.2),
+                    severity=severity,
+                    confidence=confidence_val,  # Store as numeric
+                    probability=probability,
                     model_used=random.choice(['lstm', 'cnn', 'random_forest']),
-                    input_features={'location': location, 'model': model_preference},
-                    prediction_metadata={'ensemble_weight': random.uniform(0.2, 0.8)}
+                    input_features={'location': location, 'model': model_preference, 'risk_score': base_risk},
+                    prediction_metadata={'ensemble_weight': random.uniform(0.2, 0.8), 'location_risk': base_risk}
                 )
                 predictions.append(prediction)
+            
+            confidence_score = sum(p.confidence for p in predictions) / len(predictions) if predictions else 0.7
         else:
-            # Single model prediction
-            pred_date = timezone.now().date() + timedelta(days=random.randint(1, 30))
+            # Single model prediction with realistic data
+            disaster = disaster_type if disaster_type != 'all' else random.choice(list(location_risk.keys()) if location_risk else ['flood', 'earthquake', 'drought'])
+            base_risk = location_risk.get(disaster, random.uniform(0.1, 0.5))
+            probability = min(0.9, base_risk + random.uniform(-0.1, 0.2))
+            confidence_val = random.uniform(0.5, 0.9)
+            
+            # Determine severity based on probability
+            if probability > 0.7:
+                severity = 'high'
+            elif probability > 0.4:
+                severity = 'medium'
+            else:
+                severity = 'low'
+            
+            pred_date = timezone.now().date() + timedelta(days=random.randint(1, 14))
             prediction = DisasterPrediction.objects.create(
-                type=disaster_type or random.choice(['flood', 'drought', 'earthquake']),
-                location=location,
+                type=disaster,
+                location=location_name,
                 predicted_date=pred_date,
-                severity=random.choice(['low', 'medium', 'high']),
-                confidence=random.choice(['low', 'medium', 'high']),
-                probability=random.uniform(0.1, 0.9),
+                severity=severity,
+                confidence=confidence_val,  # Store as numeric
+                probability=probability,
                 model_used=model_preference,
-                input_features={'location': location, 'model': model_preference},
-                prediction_metadata={'single_model': True}
+                input_features={'location': location, 'model': model_preference, 'risk_score': base_risk},
+                prediction_metadata={'single_model': True, 'location_risk': base_risk}
             )
             predictions.append(prediction)
-            confidence_score = random.uniform(0.5, 0.9)
+            confidence_score = confidence_val
         
         processing_time = time.time() - start_time
         
@@ -330,7 +371,9 @@ def risk_assessment(request):
 @api_view(['POST'])
 def stop_live_feed(request):
     """Stop live feed simulation"""
+    global live_feed_running
     try:
+        live_feed_running = False
         return Response({
             'status': 'Live feed stopped',
             'message': 'Live feed has been stopped.',
@@ -368,6 +411,10 @@ def service_status(request):
         return Response(status_data)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Global variables to track live feed status and store live predictions
+live_feed_running = False
+live_predictions_queue = []
 
 # Live feed simulation endpoint
 @api_view(['GET'])
@@ -412,14 +459,47 @@ def start_live_feed(request):
                     }
                 }
                 
-                # Print to console (for Django logs)
-                print(json.dumps({
+                # Print to console (for Django logs) and store in queue
+                live_prediction = {
                     'location': prediction['location'],
                     'disaster': prediction['type'],
                     'risk_level': prediction['severity'],
                     'timestamp': prediction['timestamp'],
                     'accuracy': prediction['confidence']
-                }))
+                }
+                print(json.dumps(live_prediction))
+                
+                # Add to live predictions queue (keep last 50 predictions)
+                live_predictions_queue.append(live_prediction)
+                if len(live_predictions_queue) > 50:
+                    live_predictions_queue.pop(0)
+                
+                # Auto-flag high-risk disasters for alerts
+                if live_prediction['risk_level'].lower() in ['high', 'critical'] and live_prediction['accuracy'] > 0.7:
+                    try:
+                        # Import here to avoid circular imports
+                        import requests
+                        
+                        # Send alert to backend
+                        alert_data = {
+                            'type': live_prediction['disaster'].lower(),
+                            'severity': live_prediction['risk_level'].lower(),
+                            'location': live_prediction['location'],
+                            'message': f"High-risk {live_prediction['disaster']} predicted for {live_prediction['location']} with {live_prediction['accuracy']*100:.1f}% accuracy",
+                            'source': 'ai_auto_detection',
+                            'timestamp': live_prediction['timestamp']
+                        }
+                        
+                        # Send to backend disaster alert endpoint
+                        backend_url = 'http://localhost:5000'  # Adjust if different
+                        try:
+                            requests.post(f'{backend_url}/api/disasters', json=alert_data, timeout=5)
+                            print(f"Auto-flagged disaster alert: {alert_data['message']}")
+                        except requests.exceptions.RequestException as e:
+                            print(f"Failed to send auto-alert to backend: {e}")
+                            
+                    except Exception as e:
+                        print(f"Error in auto-alert system: {e}")
                 
                 # Wait before next update
                 time.sleep(30)
@@ -436,4 +516,18 @@ def start_live_feed(request):
         "status": "started",
         "message": "Live feed simulation started. Data will be emitted every 30 seconds."
     }, status=200)
+
+# New endpoint to get live predictions for frontend
+@api_view(['GET'])
+def get_live_predictions(request):
+    """Get current live predictions from the queue"""
+    global live_predictions_queue
+    try:
+        return Response({
+            'live_predictions': live_predictions_queue[-10:] if live_predictions_queue else [],  # Last 10 predictions
+            'total_predictions': len(live_predictions_queue),
+            'timestamp': timezone.now().isoformat()
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

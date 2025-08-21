@@ -75,7 +75,7 @@ const Analytics = ({ stats }) => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {[...Array(4)].map((_, i) => (
-                    <div key={i} className="bg-gray-50 p-4 rounded-lg">
+                    <div key={`skeleton-${i}`} className="bg-gray-50 p-4 rounded-lg">
                         <Skeleton height={30} />
                         <Skeleton height={20} width="80%" />
                     </div>

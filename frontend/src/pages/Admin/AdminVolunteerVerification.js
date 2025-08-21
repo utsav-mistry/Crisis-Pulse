@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 import VerificationTaskCard from '../../components/VerificationTaskCard';
 
 const AdminVolunteerVerification = () => {
@@ -11,9 +11,7 @@ const AdminVolunteerVerification = () => {
 
     const fetchTasksForVerification = async () => {
         try {
-            const res = await axios.get('/api/volunteer-tasks/admin', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            const res = await api.get('/volunteer-tasks/admin');
             setTasks(res.data);
         } catch (error) {
             console.error('Error fetching tasks for verification', error);
@@ -22,9 +20,7 @@ const AdminVolunteerVerification = () => {
 
     const handleVerifyTask = async (taskId, approved, adminFeedback) => {
         try {
-            await axios.post(`/api/volunteer-tasks/admin/${taskId}/verify`, { approved, adminFeedback }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            await api.post(`/volunteer-tasks/admin/${taskId}/verify`, { approved, adminFeedback });
             fetchTasksForVerification(); // Refresh the list after verification
         } catch (error) {
             console.error('Error verifying task', error);

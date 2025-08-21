@@ -24,7 +24,7 @@ const LogHelp = () => {
     useEffect(() => {
         // Redirect if not volunteer
         if (user && user.role !== 'volunteer') {
-            navigate('/dashboard');
+            navigate('/app/dashboard');
             return;
         }
 

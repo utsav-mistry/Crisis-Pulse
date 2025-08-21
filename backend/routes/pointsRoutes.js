@@ -14,8 +14,8 @@ router.get('/me', authMiddleware, getUserPoints);
 // Get user points (matching test expectations)
 router.get('/user', authMiddleware, getUserPoints);
 
-// Get leaderboard
-router.get('/leaderboard', getLeaderboard);
+// Get leaderboard (authenticated users only)
+router.get('/leaderboard', authMiddleware, getLeaderboard);
 
 // Get user achievements
 router.get('/achievements', authMiddleware, getUserAchievements);

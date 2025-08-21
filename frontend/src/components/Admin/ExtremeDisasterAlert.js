@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import axios from 'axios';
+import api from '../../services/api';
 import './ExtremeDisasterAlert.css';
 
 const ExtremeDisasterAlert = ({ socket, user }) => {
@@ -76,7 +76,7 @@ const ExtremeDisasterAlert = ({ socket, user }) => {
     const handleNotifyCrpf = async (id, alertData) => {
         try {
             // Call API to notify CRPF
-            await axios.put(`/api/crpf-notifications/${id}/status`, { status: 'notified' });
+            await api.put(`/crpf-notifications/${id}/status`, { status: 'notified' });
             toast.success('CRPF has been notified');
             
             // Remove from local state

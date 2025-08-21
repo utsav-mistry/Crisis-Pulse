@@ -62,7 +62,7 @@ export const contributionAPI = {
 // Notification API
 export const notificationAPI = {
     broadcast: (notificationData) => api.post('/notifications/broadcast', notificationData),
-    getLatest: () => api.get('/notifications/latest'),
+    getLatest: () => api.get('/notifications/public/latest'),
 };
 
 // User API
@@ -89,6 +89,9 @@ export const aiAPI = {
     getDisastersByState: (state) => axios.get(`${aiBaseURL}/historical/disasters/${state}/`),
     healthCheck: () => axios.get(`${aiBaseURL}/health/`),
     serviceStatus: () => axios.get(`${aiBaseURL}/status/`),
+    getLivePredictions: () => axios.get(`${aiBaseURL}/live-feed/predictions/`),
+    startLiveFeed: () => axios.get(`${aiBaseURL}/live-feed/start/`),
+    stopLiveFeed: () => axios.post(`${aiBaseURL}/live-feed/stop/`),
 };
 
 export default api;

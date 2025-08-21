@@ -7,7 +7,6 @@ const { apiLimiter, authLimiter } = require('./middleware/rateLimiter');
 require('dotenv').config({ path: './config.env' });
 
 const app = express();
-app.set('trust proxy', 1); // Trust first proxy
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
@@ -35,7 +34,8 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api', require('./routes/aiRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
-app.use('/api/admin', require('./routes/adminRoutes')); // Consolidated admin routes
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/push', require('./routes/pushRoutes'));
 app.use('/api/setup', require('./routes/setupRoutes'));
 app.use('/api/crpf-notifications', require('./routes/crpfNotificationRoutes'));
 app.use('/api/volunteer-help', require('./routes/volunteerHelpRoutes'));

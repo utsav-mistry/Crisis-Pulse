@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 // Context
@@ -21,7 +21,7 @@ import AdminSetup from './pages/Setup/AdminSetup';
 
 // Main Pages
 import Landing from './pages/Landing';
-import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/DashboardRefined';
 import DisasterFeed from './pages/DisasterFeed';
 import SafetyCenter from './pages/SafetyCenter';
 import Profile from './pages/Profile';
@@ -37,13 +37,17 @@ import VolunteerHelpVerification from './pages/Admin/VolunteerHelpVerification';
 import UserManagement from './pages/Admin/UserManagement';
 import SubscriptionsPage from './pages/Admin/SubscriptionsPage';
 import AdminVolunteerVerification from './pages/Admin/AdminVolunteerVerification';
+import AdminTaskManagement from './pages/Admin/AdminTaskManagement';
 import AdminTestLogs from './pages/Admin/AdminTestLogs';
+import RoomManagement from './components/Admin/RoomManagement';
+import PublicNotificationBroadcast from './components/Admin/PublicNotificationBroadcast';
 
 // Volunteer Pages
+import VolunteerDashboard from './pages/Volunteer/VolunteerDashboardRefined';
+import VolunteerTasks from './pages/Volunteer/VolunteerTasks';
 import LogHelp from './pages/Volunteer/LogHelp';
-import HelpLogDetail from './pages/Volunteer/HelpLogDetail';
 import SignUpForHelp from './pages/Volunteer/SignUpForHelp';
-import VolunteerDashboard from './pages/Volunteer/VolunteerDashboard';
+import HelpLogDetail from './pages/Volunteer/HelpLogDetail';
 
 // Styles
 import './index.css';
@@ -62,7 +66,7 @@ function App() {
                             <Route path="/setup/admin" element={<AdminSetup />} />
 
                             {/* Layout Routes - All app routes use the same layout */}
-                            <Route path="/*" element={<Layout />}>
+                            <Route path="/app/*" element={<Layout />}>
                                 {/* Protected Routes */}
                                 <Route path="dashboard" element={
                                     <ProtectedRoute>
@@ -77,11 +81,15 @@ function App() {
                                     </ProtectedRoute>
                                 } />
                                 <Route path="contributions" element={
-                                    <ProtectedRoute>
+                                    <ProtectedRoute requiredRole={["user", "volunteer"]}>
                                         <Contributions />
                                     </ProtectedRoute>
                                 } />
-                                <Route path="leaderboard" element={<Leaderboard />} />
+                                <Route path="leaderboard" element={
+                                    <ProtectedRoute>
+                                        <Leaderboard />
+                                    </ProtectedRoute>
+                                } />
                                 <Route path="disasters" element={
                                     <ProtectedRoute requiredRole="admin">
                                         <Disasters />
@@ -124,28 +132,33 @@ function App() {
                                         <AdminVolunteerVerification />
                                     </ProtectedRoute>
                                 } />
+                                <Route path="admin/task-management" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <AdminTaskManagement />
+                                    </ProtectedRoute>
+                                } />
                                 <Route path="admin/test-logs" element={ 
                                     <ProtectedRoute requiredRole="admin">
                                         <AdminTestLogs />
                                     </ProtectedRoute>
                                 } />
+                                <Route path="admin/room-management" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <RoomManagement />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="admin/public-notifications" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <PublicNotificationBroadcast />
+                                    </ProtectedRoute>
+                                } />
 
                                 {/* Volunteer Routes */}
-                                <Route path="volunteer/log-help" element={
-                                    <ProtectedRoute requiredRole="volunteer">
-                                        <LogHelp />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="volunteer/help-log/:id" element={
-                                    <ProtectedRoute requiredRole="volunteer">
-                                        <HelpLogDetail />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="volunteer/dashboard" element={
-                                    <ProtectedRoute requiredRole="volunteer">
-                                        <VolunteerDashboard />
-                                    </ProtectedRoute>
-                                } />
+                                <Route path="volunteer/dashboard" element={<ProtectedRoute requiredRole="volunteer"><VolunteerDashboard /></ProtectedRoute>} />
+                                <Route path="volunteer/tasks" element={<ProtectedRoute requiredRole="volunteer"><VolunteerTasks /></ProtectedRoute>} />
+                                <Route path="volunteer/log-help" element={<ProtectedRoute requiredRole="volunteer"><LogHelp /></ProtectedRoute>} />
+                                <Route path="volunteer/sign-up-help" element={<ProtectedRoute requiredRole="volunteer"><SignUpForHelp /></ProtectedRoute>} />
+                                <Route path="volunteer/help-detail/:id" element={<ProtectedRoute requiredRole="volunteer"><HelpLogDetail /></ProtectedRoute>} />
                             </Route>
                         </Routes>
 

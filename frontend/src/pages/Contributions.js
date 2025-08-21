@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Gift, Award, Plus, MapPin, Calendar, Package, Truck, CheckCircle, Clock, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Plus, Heart, Package, Clock, CheckCircle, Truck, Award, MapPin, Calendar, User } from 'lucide-react';
 import ContributionForm from '../components/ContributionForm';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 
 const Contributions = () => {
@@ -17,15 +19,8 @@ const Contributions = () => {
     const fetchContributions = async () => {
         try {
             if (!user || !user._id) return;
-            const response = await fetch(`/api/contributions/user/${user._id}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setContributions(data);
-            }
+            const response = await api.get(`/contributions/user/${user._id}`);
+            setContributions(response.data);
         } catch (error) {
             console.error('Error fetching contributions:', error);
         }
@@ -34,26 +29,12 @@ const Contributions = () => {
 
     const handleContributionSubmit = async (contributionData) => {
         try {
-            const response = await fetch('/api/contributions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(contributionData)
-            });
-
-            if (response.ok) {
-                const newContribution = await response.json();
-                setContributions(prev => [newContribution, ...prev]);
-                setShowForm(false);
-                toast.success('Contribution submitted successfully! You earned 10 points.');
-                // Refresh user data to update points
-                window.location.reload();
-            } else {
-                const error = await response.json();
-                toast.error(error.message || 'Failed to submit contribution');
-            }
+            const response = await api.post('/contribute', contributionData);
+            setContributions(prev => [response.data, ...prev]);
+            setShowForm(false);
+            toast.success('Contribution submitted successfully! You earned 10 points.');
+            // Refresh user data to update points
+            window.location.reload();
         } catch (error) {
             console.error('Error submitting contribution:', error);
             toast.error('Failed to submit contribution');
@@ -99,19 +80,33 @@ const Contributions = () => {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-neutral-900">My Contributions</h1>
-                    <p className="text-neutral-600">Track your contributions and earn points</p>
+        <div className="space-y-8">
+            {/* Enhanced Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold mb-2">My Contributions</h1>
+                        <p className="text-blue-100 text-lg">Track your disaster relief contributions and impact</p>
+                        <div className="flex items-center mt-3 space-x-4">
+                            <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                <span className="text-sm text-blue-100">Making a Difference</span>
+                            </div>
+                            <div className="text-sm text-blue-100">
+                                Total Contributions: {contributions.length}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <Link
+                            to="/contribute"
+                            className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-6 py-3 rounded-lg hover:bg-white/30 transition-all duration-200 flex items-center font-medium"
+                        >
+                            <Plus className="w-5 h-5 mr-2" />
+                            New Contribution
+                        </Link>
+                    </div>
                 </div>
-                <button 
-                    onClick={() => setShowForm(true)}
-                    className="btn btn-primary"
-                >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Make Contribution
-                </button>
             </div>
 
             {/* Stats Cards */}

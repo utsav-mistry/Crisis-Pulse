@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware, authorize } = require('../middleware/authMiddleware');
 const {
+    createTask,
     getOpenTasks,
     getMyTasks,
     claimTask,
@@ -10,8 +11,9 @@ const {
     verifyTask
 } = require('../controllers/volunteerTaskController');
 
-// Volunteer routes
+// Admin routes
 router.route('/')
+    .post(authMiddleware, authorize('admin'), createTask)
     .get(authMiddleware, authorize('volunteer'), getOpenTasks);
 
 router.route('/my-tasks')

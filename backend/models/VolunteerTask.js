@@ -36,6 +36,12 @@ const volunteerTaskSchema = new mongoose.Schema({
     },
     adminFeedback: {
         type: String
+    },
+    submittedAt: {
+        type: Date
+    },
+    cancelledAt: {
+        type: Date
     }
 }, { timestamps: true });
 

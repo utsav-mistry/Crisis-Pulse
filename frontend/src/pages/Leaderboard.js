@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import { 
     Trophy, 
     Medal, 
@@ -27,15 +28,9 @@ const Leaderboard = () => {
         const fetchLeaderboard = async () => {
             try {
                 setLoading(true);
-                const response = await fetch('/api/points/leaderboard', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+                const response = await api.get('/points/leaderboard');
                 
-                if (response.ok) {
-                    const data = await response.json();
+                const data = response.data;
                     
                     // Ensure data is an array
                     const leaderboardArray = Array.isArray(data) ? data : (data.leaderboard || []);
@@ -73,10 +68,6 @@ const Leaderboard = () => {
                         // No data available
                         setLeaderboardData([]);
                     }
-                } else {
-                    console.error('Failed to fetch leaderboard:', response.status);
-                    setLeaderboardData([]);
-                }
             } catch (error) {
                 console.error('Error fetching leaderboard:', error);
                 setLeaderboardData([]);
@@ -114,51 +105,85 @@ const Leaderboard = () => {
         }
     };
 
-    const achievements = [
-        {
-            name: 'First Responder',
-            description: 'Responded to 10+ emergency situations',
-            icon: Shield,
-            color: 'text-red-600',
-            earned: true
-        },
-        {
-            name: 'Community Hero',
-            description: 'Made 25+ contributions',
-            icon: Heart,
-            color: 'text-pink-600',
-            earned: user?.points > 500
-        },
-        {
-            name: 'Team Leader',
-            description: 'Led 5+ volunteer operations',
-            icon: Users,
-            color: 'text-blue-600',
-            earned: false
-        },
-        {
-            name: 'Expert Helper',
-            description: 'Reached 1000+ points',
-            icon: Star,
-            color: 'text-yellow-600',
-            earned: user?.points > 1000
-        }
-    ];
+    const [achievements, setAchievements] = useState([]);
+
+    useEffect(() => {
+        const fetchAchievements = async () => {
+            try {
+                if (user) {
+                    const response = await api.get('/points/achievements');
+                    const achievementsData = response.data;
+                    // Ensure we always set an array
+                    if (Array.isArray(achievementsData)) {
+                        setAchievements(achievementsData);
+                    } else {
+                        setAchievements([]);
+                    }
+                } else {
+                    setAchievements([]);
+                }
+            } catch (error) {
+                console.error('Error fetching achievements:', error);
+                // Fallback achievements if API fails
+                setAchievements([
+                    {
+                        name: 'First Responder',
+                        description: 'Responded to 10+ emergency situations',
+                        icon: Shield,
+                        color: 'text-red-600',
+                        earned: user?.points > 250
+                    },
+                    {
+                        name: 'Community Hero',
+                        description: 'Made 25+ contributions',
+                        icon: Heart,
+                        color: 'text-pink-600',
+                        earned: user?.points > 500
+                    },
+                    {
+                        name: 'Team Leader',
+                        description: 'Led 5+ volunteer operations',
+                        icon: Users,
+                        color: 'text-blue-600',
+                        earned: user?.points > 750
+                    },
+                    {
+                        name: 'Expert Helper',
+                        description: 'Reached 1000+ points',
+                        icon: Star,
+                        color: 'text-yellow-600',
+                        earned: user?.points > 1000
+                    }
+                ]);
+            }
+        };
+        fetchAchievements();
+    }, [user]);
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-neutral-900 flex items-center">
-                        <Trophy className="w-6 h-6 mr-2 text-yellow-500" />
-                        Leaderboard
-                    </h1>
-                    <p className="text-neutral-600">
-                        Top contributors and volunteers making a difference
-                    </p>
+        <div className="space-y-8">
+            {/* Enhanced Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-8 text-white text-center">
+                <h1 className="text-4xl font-bold mb-3">Community Leaderboard</h1>
+                <p className="text-purple-100 text-lg">Top contributors making a difference in disaster response</p>
+                <div className="flex justify-center items-center mt-4 space-x-6">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+                        <div className="text-sm text-purple-100">Total Contributors</div>
+                        <div className="text-2xl font-bold">{leaderboardData.length}</div>
+                    </div>
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+                        <div className="text-sm text-purple-100">Your Rank</div>
+                        <div className="text-2xl font-bold">#{userRank || '--'}</div>
+                    </div>
                 </div>
-                <div className="flex space-x-2">
+            </div>
+
+            {/* Filters and Controls */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">Filter & Sort</h2>
+                </div>
+                <div className="flex space-x-4">
                     <select 
                         value={timeFilter}
                         onChange={(e) => setTimeFilter(e.target.value)}
@@ -319,7 +344,7 @@ const Leaderboard = () => {
                 </div>
                 <div className="card-body">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {achievements.map((achievement, index) => {
+                        {Array.isArray(achievements) && achievements.map((achievement, index) => {
                             const Icon = achievement.icon;
                             return (
                                 <div key={index} className={`p-4 rounded-lg border ${

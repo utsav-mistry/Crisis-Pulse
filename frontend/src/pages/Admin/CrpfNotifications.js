@@ -15,7 +15,7 @@ const CrpfNotifications = () => {
     // Redirect if not admin
     useEffect(() => {
         if (user && user.role !== 'admin') {
-            navigate('/dashboard');
+            navigate('/app/dashboard');
             toast.error('Unauthorized access');
         }
     }, [user, navigate]);

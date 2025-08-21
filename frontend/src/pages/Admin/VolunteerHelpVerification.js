@@ -16,7 +16,7 @@ const VolunteerHelpVerification = () => {
     useEffect(() => {
         // Redirect if not admin
         if (user && user.role !== 'admin') {
-            navigate('/dashboard');
+            navigate('/app/dashboard');
             return;
         }
 

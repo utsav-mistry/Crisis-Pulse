@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Bell, BrainCircuit, TestTube } from 'lucide-react';
 import toast from 'react-hot-toast';
-import axios from 'axios';
+import api from '../../services/api';
 
 const AdminTestPanel = () => {
     const { user } = useAuth();
@@ -32,12 +32,11 @@ const AdminTestPanel = () => {
 
     React.useEffect(() => {
         if (user && user.role !== 'admin') {
-            navigate('/dashboard');
+            navigate('/app/dashboard');
             toast.error('Unauthorized access');
         }
     }, [user, navigate]);
 
-    const getToken = () => localStorage.getItem('token');
 
     const handleCreateTestDisaster = async (e) => {
         e.preventDefault();
@@ -47,9 +46,7 @@ const AdminTestPanel = () => {
         setLoading(prev => ({ ...prev, disaster: true }));
         try {
             const payload = { ...disasterData, test: true };
-            await axios.post('/api/disasters', payload, {
-                headers: { Authorization: `Bearer ${getToken()}` }
-            });
+            await api.post('/disasters/raise', payload);
             toast.success('Test disaster created successfully. [TEST] notifications sent.');
             setDisasterData({ type: 'flood', severity: 'medium', title: '', description: '', location: { city: '', state: '', address: '' } });
         } catch (error) {
@@ -67,9 +64,7 @@ const AdminTestPanel = () => {
         setLoading(prev => ({ ...prev, notification: true }));
         try {
             const payload = { ...notificationData, test: true };
-            await axios.post('/api/notifications/broadcast', payload, {
-                headers: { Authorization: `Bearer ${getToken()}` }
-            });
+            await api.post('/notifications/broadcast', payload);
             toast.success('Test notification broadcasted successfully.');
             setNotificationData({ type: 'general', severity: 'medium', message: '', location: { name: 'Site-wide' } });
         } catch (error) {
@@ -87,9 +82,7 @@ const AdminTestPanel = () => {
         setLoading(prev => ({ ...prev, aiAdvice: true }));
         try {
             const payload = { ...aiAdviceData, test: true };
-            await axios.post('/api/admin/ai/advice', payload, {
-                headers: { Authorization: `Bearer ${getToken()}` }
-            });
+            await api.post('/llm-advice', payload);
             toast.success('Test AI advice sent successfully.');
             setAiAdviceData({ message: '' });
         } catch (error) {

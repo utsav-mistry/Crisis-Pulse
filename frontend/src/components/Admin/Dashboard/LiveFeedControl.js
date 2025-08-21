@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Play, Square, Activity, AlertCircle } from 'lucide-react';
+import { Activity, Play, Square } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const LiveFeedControl = () => {
     const [feedStatus, setFeedStatus] = useState('stopped');
@@ -18,13 +19,13 @@ const LiveFeedControl = () => {
             if (response.ok) {
                 const result = await response.json();
                 setFeedStatus('running');
-                console.log('Live feed started:', result.message);
+                toast.success('Live feed started successfully');
             } else {
                 throw new Error(`Failed to start live feed: ${response.statusText}`);
             }
         } catch (error) {
             console.error('Error starting live feed:', error);
-            alert(`Error starting live feed: ${error.message}`);
+            toast.error(`Error starting live feed: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -43,13 +44,13 @@ const LiveFeedControl = () => {
             if (response.ok) {
                 const result = await response.json();
                 setFeedStatus('stopped');
-                console.log('Live feed stopped:', result.message);
+                toast.success('Live feed stopped successfully');
             } else {
                 throw new Error(`Failed to stop live feed: ${response.statusText}`);
             }
         } catch (error) {
             console.error('Error stopping live feed:', error);
-            alert(`Error stopping live feed: ${error.message}`);
+            toast.error(`Error stopping live feed: ${error.message}`);
         } finally {
             setLoading(false);
         }

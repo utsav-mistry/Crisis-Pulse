@@ -13,9 +13,9 @@ const Register = () => {
     useEffect(() => {
         if (isAuthenticated && user) {
             if (user.role === 'admin') {
-                navigate('/admin/dashboard');
+                navigate('/app/admin/dashboard');
             } else {
-                navigate('/dashboard');
+                navigate('/app/dashboard');
             }
         }
     }, [isAuthenticated, user, navigate]);
