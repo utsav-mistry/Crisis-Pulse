@@ -34,6 +34,7 @@ app.use('/api/contributions', require('./routes/contributionRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api', require('./routes/aiRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes')); // Consolidated admin routes
 app.use('/api/setup', require('./routes/setupRoutes'));
 app.use('/api/crpf-notifications', require('./routes/crpfNotificationRoutes'));

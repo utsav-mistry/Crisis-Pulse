@@ -3,6 +3,39 @@ const Notification = require('../models/Notification');
 const TestLog = require('../models/TestLog');
 
 // Get all users with filtering and pagination
+const updateUserRole = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role } = req.body;
+
+        if (!['user', 'volunteer', 'admin', 'crpf'].includes(role)) {
+            return res.status(400).json({ message: 'Invalid role specified' });
+        }
+
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.role = role;
+        await user.save({ validateModifiedOnly: true });
+
+        res.json({
+            message: 'User role updated successfully',
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('Error updating user role:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Get all users with filtering and pagination
 const getAllUsers = async (req, res) => {
     try {
         const { 
@@ -362,6 +395,54 @@ const toggleUserBan = async (req, res) => {
     }
 };
 
+// Delete user
+const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.role === 'admin') {
+            return res.status(400).json({ message: 'Cannot delete admin users' });
+        }
+
+        await User.findByIdAndDelete(id);
+
+        res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Get system statistics
+const getSystemStats = async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const totalVolunteers = await User.countDocuments({ role: 'volunteer' });
+        const approvedVolunteers = await User.countDocuments({ role: 'volunteer', volunteerStatus: 'approved' });
+        const pendingVolunteers = await User.countDocuments({ role: 'volunteer', volunteerStatus: 'pending' });
+        const activeUsers = await User.countDocuments({ isActive: true });
+
+        const stats = {
+            totalUsers,
+            totalVolunteers,
+            approvedVolunteers,
+            pendingVolunteers,
+            activeUsers,
+            inactiveUsers: totalUsers - activeUsers
+        };
+
+        res.json(stats);
+    } catch (error) {
+        console.error('Error fetching system stats:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 // Send AI-generated safety advice
 const sendAiAdvice = async (req, res) => {
     const { message, test } = req.body;
@@ -394,6 +475,7 @@ const sendAiAdvice = async (req, res) => {
 };
 
 module.exports = {
+    updateUserRole,
     getAllUsers,
     approveVolunteer,
     rejectVolunteer,
@@ -401,5 +483,7 @@ module.exports = {
     getVolunteerStats,
     createAdmin,
     toggleUserBan,
+    deleteUser,
+    getSystemStats,
     sendAiAdvice
 };
