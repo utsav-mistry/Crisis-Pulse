@@ -16,7 +16,8 @@ const Contributions = () => {
 
     const fetchContributions = async () => {
         try {
-            const response = await fetch('/api/contributions', {
+            if (!user || !user._id) return;
+            const response = await fetch(`/api/contributions/user/${user._id}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }

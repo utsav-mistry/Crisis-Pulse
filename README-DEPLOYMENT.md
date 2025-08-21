@@ -65,10 +65,11 @@ npm start
 - User management (approve/reject/suspend volunteers)
 - Disaster management
 - CRPF notifications (dummy system)
-- System analytics
+- System analytics with AI-powered insights
+- Volunteer task verification
 
 ### Volunteer (Requires Admin Approval)
-- Help logging during disasters
+- Claiming and completing volunteer tasks
 - Disaster response participation
 - Points earning system
 - Status: pending → approved/rejected/suspended
@@ -94,6 +95,14 @@ npm start
 - `PATCH /api/admin/volunteers/:id/suspend` - Suspend volunteer
 - `GET /api/admin/volunteers/stats` - Volunteer statistics
 
+### Volunteer Tasks
+- `GET /api/volunteer-tasks` - Get all open tasks
+- `GET /api/volunteer-tasks/my-tasks` - Get volunteer's claimed tasks
+- `POST /api/volunteer-tasks/:id/claim` - Claim a task
+- `POST /api/volunteer-tasks/:id/submit` - Submit task proof
+- `GET /api/admin/volunteer-tasks` - Get tasks for verification
+- `POST /api/admin/volunteer-tasks/:id/verify` - Verify a task
+
 ### Core Features
 - `GET /api/disasters` - List disasters
 - `POST /api/disasters` - Create disaster report
@@ -111,6 +120,7 @@ MONGO_URI=mongodb://localhost:27017/crisis-pulse
 JWT_SECRET=crisis-pulse-jwt-secret-key-2025-production-ready
 ADMIN_CREATION_KEY=crisis-pulse-admin-2025
 ADMIN_RESET_KEY=crisis-pulse-reset-2025
+AI_SERVICE_URL=http://localhost:8000/api
 ```
 
 ### Frontend Configuration
@@ -143,7 +153,8 @@ npm run test:admin
 - **Disaster Management**
 - **Contribution System**
 - **Points & Leaderboard**
-- **Admin Dashboard**
+- **Admin Dashboard** with advanced analytics
+- **Volunteer Task Management System**
 - **Secure Admin Creation**
 
 ### 🔒 Security Measures

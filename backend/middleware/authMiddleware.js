@@ -51,7 +51,6 @@ const authorize = (...roles) => {
 };
 
 module.exports = {
-    protect: authMiddleware,
     authMiddleware,
     requireAdmin,
     authorize

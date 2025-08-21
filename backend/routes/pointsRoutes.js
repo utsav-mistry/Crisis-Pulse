@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const { authMiddleware } = require('../middleware/authMiddleware');
 const {
     getUserPoints,
     getLeaderboard,
@@ -9,18 +9,18 @@ const {
 } = require('../controllers/pointsController');
 
 // Get current user's points and ranking
-router.get('/me', protect, getUserPoints);
+router.get('/me', authMiddleware, getUserPoints);
 
 // Get user points (matching test expectations)
-router.get('/user', protect, getUserPoints);
+router.get('/user', authMiddleware, getUserPoints);
 
 // Get leaderboard
 router.get('/leaderboard', getLeaderboard);
 
 // Get user achievements
-router.get('/achievements', protect, getUserAchievements);
+router.get('/achievements', authMiddleware, getUserAchievements);
 
 // Get points history/activity
-router.get('/history', protect, getPointsHistory);
+router.get('/history', authMiddleware, getPointsHistory);
 
 module.exports = router;

@@ -8,14 +8,15 @@ A comprehensive disaster management platform that combines AI-powered prediction
 - **AI-Powered Disaster Prediction**: Machine learning models for flood, earthquake, drought, and cyclone prediction
 - **Real-time Alerts**: Socket.io based real-time notifications and emergency broadcasts
 - **Multi-role System**: Support for Volunteers, CRPF personnel, and Administrators
-- **Community Response**: Volunteer contribution tracking and points system
+- **Volunteer Ticket System**: Admins can create tasks for disasters; volunteers can claim, complete, and submit them for verification.
+- **Community Response**: Volunteer contribution tracking and points system.
 - **Weather Integration**: Current weather data and forecasting
 - **LLM-Powered Advice**: AI-generated safety and prevention advice
 
 ### User Roles
 - **Volunteers**: Contribute resources, receive alerts, earn points
 - **CRPF Personnel**: Manage disaster response, coordinate volunteers
-- **Administrators**: System management, user oversight, analytics
+- **Administrators**: System management, user oversight, and an advanced analytics dashboard with data visualizations and AI-powered insights.
 
 ## Architecture
 
@@ -54,6 +55,15 @@ crisis-pulse/
 - `POST /api/llm-advice` - AI safety advice
 - `GET /api/weather/forecast` - Weather forecasting
 - `GET /api/analytics/disaster-trends` - Trend analysis
+- `GET /api/analytics/insights` - AI-powered insights for the admin dashboard
+
+### Volunteer Tasks
+- `GET /api/volunteer-tasks` - Get all open volunteer tasks
+- `GET /api/volunteer-tasks/my-tasks` - Get tasks claimed by the logged-in volunteer
+- `POST /api/volunteer-tasks/:id/claim` - Claim a volunteer task
+- `POST /api/volunteer-tasks/:id/submit` - Submit proof for a volunteer task
+- `GET /api/admin/volunteer-tasks` - Get all tasks for admin verification
+- `POST /api/admin/volunteer-tasks/:id/verify` - Verify a volunteer task
 
 ### Contributions
 - `POST /api/contribute` - Submit contribution
@@ -96,7 +106,7 @@ crisis-pulse/
 - Role-based access control
 - Input validation and sanitization
 - CORS configuration
-- Rate limiting (to be implemented)
+- Rate limiting
 
 ## Data Models
 
@@ -136,6 +146,32 @@ crisis-pulse/
   item: String,
   quantity: Number,
   pointsEarned: Number
+}
+```
+
+### VolunteerTask Model
+```javascript
+{
+  disaster: ObjectId (Disaster),
+  description: String,
+  requiredSkills: [String],
+  status: ['open', 'claimed', 'submitted', 'approved', 'rejected', 'expired'],
+  volunteer: ObjectId (User),
+  claimedAt: Date,
+  deadline: Date,
+  proof: String,
+  adminFeedback: String
+}
+```
+
+### Notification Model
+```javascript
+{
+  recipient: String, // User ID or role
+  type: String,
+  message: String,
+  read: Boolean,
+  link: String // URL for client-side navigation
 }
 ```
 

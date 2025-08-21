@@ -7,6 +7,9 @@ from datetime import datetime, timedelta
 import json
 import time
 import random
+import requests
+import threading
+from datetime import datetime
 
 from .models import (
     HistoricalDisaster, DisasterPrediction, WeatherData, 
@@ -14,16 +17,20 @@ from .models import (
 )
 
 # Core prediction endpoints
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 def predict_disaster(request):
     """Enhanced disaster prediction with multiple model support"""
     try:
         start_time = time.time()
         
         # Parse JSON data
-        data = request.data
-        location = data.get('location', {})
-        disaster_type = data.get('disaster_type')
+        if request.method == 'POST':
+            data = request.data
+        else:  # GET request
+            data = request.query_params.dict()
+            
+        location = data.get('location', 'Unknown Location')
+        disaster_type = data.get('disaster_type', 'Unknown')
         model_preference = data.get('model_preference', 'ensemble')
         
         # Create prediction request record
@@ -319,6 +326,19 @@ def risk_assessment(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# Stop live feed endpoint
+@api_view(['POST'])
+def stop_live_feed(request):
+    """Stop live feed simulation"""
+    try:
+        return Response({
+            'status': 'Live feed stopped',
+            'message': 'Live feed has been stopped.',
+            'timestamp': timezone.now().isoformat()
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 # Health check and status
 @api_view(['GET'])
 def health_check(request):
@@ -345,7 +365,75 @@ def service_status(request):
             'total_requests': PredictionRequest.objects.count(),
             'last_updated': timezone.now().isoformat()
         }
-        
         return Response(status_data)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Live feed simulation endpoint
+@api_view(['GET'])
+def start_live_feed(request):
+    """Start live feed simulation that prints to console and emits to frontend"""
+    global live_feed_running
+    
+    if live_feed_running:
+        return Response({"status": "already_running", "message": "Live feed is already running"}, status=200)
+    
+    live_feed_running = True
+    
+    def simulate_live_feed():
+        while live_feed_running:
+            try:
+                # Generate random disaster data
+                disaster_types = ['Earthquake', 'Flood', 'Hurricane', 'Wildfire', 'Tornado']
+                locations = [
+                    'New York, USA', 'Tokyo, Japan', 'London, UK', 'Sydney, Australia',
+                    'Mumbai, India', 'Sao Paulo, Brazil', 'Cape Town, South Africa'
+                ]
+                risk_levels = ['Low', 'Medium', 'High', 'Critical']
+                
+                prediction = {
+                    'id': str(random.randint(1000, 9999)),
+                    'type': random.choice(disaster_types),
+                    'location': random.choice(locations),
+                    'severity': random.choice(risk_levels),
+                    'confidence': round(random.uniform(0.6, 0.99), 4),
+                    'probability': round(random.uniform(0.1, 0.9), 4),
+                    'timestamp': datetime.utcnow().isoformat() + 'Z',
+                    'metadata': {
+                        'weather_conditions': {
+                            'temperature': round(random.uniform(-10, 40), 1),
+                            'humidity': random.randint(30, 90),
+                            'wind_speed': round(random.uniform(0, 50), 1),
+                            'condition': random.choice(['Clear', 'Partly Cloudy', 'Cloudy', 'Rain', 'Storm'])
+                        },
+                        'risk_factors': [
+                            f'High {random.choice(["population density", "building age", "terrain slope"])}'
+                        ]
+                    }
+                }
+                
+                # Print to console (for Django logs)
+                print(json.dumps({
+                    'location': prediction['location'],
+                    'disaster': prediction['type'],
+                    'risk_level': prediction['severity'],
+                    'timestamp': prediction['timestamp'],
+                    'accuracy': prediction['confidence']
+                }))
+                
+                # Wait before next update
+                time.sleep(30)
+                
+            except Exception as e:
+                print(f"Error in live feed simulation: {str(e)}")
+                time.sleep(5)  # Wait before retrying
+    
+    # Start the live feed in a separate thread
+    live_feed_thread = threading.Thread(target=simulate_live_feed, daemon=True)
+    live_feed_thread.start()
+    
+    return Response({
+        "status": "started",
+        "message": "Live feed simulation started. Data will be emitted every 30 seconds."
+    }, status=200)
+

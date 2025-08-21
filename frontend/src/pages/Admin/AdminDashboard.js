@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
-import axios from 'axios';
+import api from '../../services/api';
 import { 
     Users, 
     AlertTriangle, 
@@ -16,17 +16,23 @@ import {
     Send,
     UserCheck,
     MapPin,
-    TrendingUp
+    TrendingUp,
+    FileText
 } from 'lucide-react';
+import Analytics from '../../components/Admin/Analytics';
+import StatCard from '../../components/Admin/Dashboard/StatCard';
+import LiveFeed from '../../components/Admin/Dashboard/LiveFeed';
 
 const AdminDashboard = () => {
     const [stats, setStats] = useState({
-        totalUsers: 0,
-        totalDisasters: 0,
-        activeVolunteers: 0,
+        users: 0,
+        activeDisasters: 0,
+        volunteers: 0,
         pendingVerifications: 0,
-        onlineUsers: 0,
-        totalContributions: 0
+        contributions: 0,
+        predictions: 0,
+        alerts: 0,
+        responseTime: '0min'
     });
     const [loading, setLoading] = useState(true);
     const [testNotification, setTestNotification] = useState('');
@@ -55,22 +61,10 @@ const AdminDashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const [usersRes, disastersRes, volunteersRes, verificationsRes, contributionsRes] = await Promise.all([
-                    axios.get('/api/users', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-                    axios.get('/api/disasters', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-                    axios.get('/api/users?role=volunteer', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-                    axios.get('/api/volunteer-help?status=pending', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-                    axios.get('/api/contributions', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-                ]);
-
-                setStats({
-                    totalUsers: usersRes.data.length || 0,
-                    totalDisasters: disastersRes.data.filter(d => d.status === 'active').length || 0,
-                    activeVolunteers: volunteersRes.data.length || 0,
-                    pendingVerifications: verificationsRes.data.length || 0,
-                    onlineUsers: 0, // Remove mock data
-                    totalContributions: contributionsRes.data.length || 0
+                const { data } = await api.get('/dashboard/stats', {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
                 });
+                setStats(data);
             } catch (error) {
                 console.error('Error fetching stats:', error);
                 toast.error('Failed to load dashboard stats');
@@ -104,7 +98,7 @@ const AdminDashboard = () => {
 
     const handleAddDisaster = async () => {
         try {
-            const response = await axios.post('/api/disasters/raise', newDisaster, {
+            const response = await api.post('/disasters/raise', newDisaster, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
 
@@ -167,78 +161,21 @@ const AdminDashboard = () => {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-                    <div className="flex items-center">
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Users className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div className="ml-4">
-                            <p className="text-sm font-medium text-neutral-600">Total Users</p>
-                            <p className="text-2xl font-bold text-neutral-900">{stats.totalUsers}</p>
-                        </div>
-                    </div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard icon={<Users className="w-6 h-6" />} label="Total Users" value={stats.users} color="blue" />
+                <StatCard icon={<AlertTriangle className="w-6 h-6" />} label="Active Disasters" value={stats.activeDisasters} color="red" />
+                <StatCard icon={<Shield className="w-6 h-6" />} label="Active Volunteers" value={stats.volunteers} color="green" />
+                <StatCard icon={<Clock className="w-6 h-6" />} label="Pending Verifications" value={stats.pendingVerifications} color="yellow" />
+                <StatCard icon={<TrendingUp className="w-6 h-6" />} label="Total Contributions" value={stats.contributions} color="indigo" />
+                <StatCard icon={<Activity className="w-6 h-6" />} label="AI Predictions" value={stats.predictions} color="purple" />
+                <StatCard icon={<Bell className="w-6 h-6" />} label="System Alerts" value={stats.alerts} color="red" />
+                <StatCard icon={<Clock className="w-6 h-6" />} label="Avg. Response Time" value={stats.responseTime} color="blue" />
+            </div>
 
-                <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-                    <div className="flex items-center">
-                        <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                            <AlertTriangle className="w-6 h-6 text-red-600" />
-                        </div>
-                        <div className="ml-4">
-                            <p className="text-sm font-medium text-neutral-600">Active Disasters</p>
-                            <p className="text-2xl font-bold text-neutral-900">{stats.totalDisasters}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-                    <div className="flex items-center">
-                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Shield className="w-6 h-6 text-green-600" />
-                        </div>
-                        <div className="ml-4">
-                            <p className="text-sm font-medium text-neutral-600">Active Volunteers</p>
-                            <p className="text-2xl font-bold text-neutral-900">{stats.activeVolunteers}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-                    <div className="flex items-center">
-                        <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                            <Clock className="w-6 h-6 text-yellow-600" />
-                        </div>
-                        <div className="ml-4">
-                            <p className="text-sm font-medium text-neutral-600">Pending Verifications</p>
-                            <p className="text-2xl font-bold text-neutral-900">{stats.pendingVerifications}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-                    <div className="flex items-center">
-                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <Activity className="w-6 h-6 text-purple-600" />
-                        </div>
-                        <div className="ml-4">
-                            <p className="text-sm font-medium text-neutral-600">Online Users</p>
-                            <p className="text-2xl font-bold text-neutral-900">{stats.onlineUsers}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-                    <div className="flex items-center">
-                        <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                            <TrendingUp className="w-6 h-6 text-indigo-600" />
-                        </div>
-                        <div className="ml-4">
-                            <p className="text-sm font-medium text-neutral-600">Total Contributions</p>
-                            <p className="text-2xl font-bold text-neutral-900">{stats.totalContributions}</p>
-                        </div>
-                    </div>
-                </div>
+            {/* Live Feed and Analytics */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Analytics stats={stats} />
+                <LiveFeed />
             </div>
 
             {/* Quick Actions */}
@@ -351,7 +288,7 @@ const AdminDashboard = () => {
             {/* Management Actions */}
             <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
                 <h3 className="text-lg font-semibold text-neutral-900 mb-4">System Management</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <button 
                         onClick={() => navigate('/admin/crpf-notifications')}
                         className="btn btn-outline flex items-center justify-center p-4 h-auto"
@@ -379,6 +316,20 @@ const AdminDashboard = () => {
                     >
                         <TrendingUp className="w-5 h-5 mr-2" />
                         <span>View Leaderboard</span>
+                    </button>
+                    <button 
+                        onClick={() => navigate('/admin/subscriptions')}
+                        className="btn btn-outline flex items-center justify-center p-4 h-auto"
+                    >
+                        <Users className="w-5 h-5 mr-2" />
+                        <span>Subscriptions</span>
+                    </button>
+                    <button 
+                        onClick={() => navigate('/admin/test-logs')}
+                        className="btn btn-outline flex items-center justify-center p-4 h-auto"
+                    >
+                        <FileText className="w-5 h-5 mr-2" />
+                        <span>Test Logs</span>
                     </button>
                 </div>
             </div>

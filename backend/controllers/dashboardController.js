@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Disaster = require('../models/Disaster');
 const Contribution = require('../models/Contribution');
 const VolunteerHelp = require('../models/VolunteerHelp');
+const AIInsight = require('../models/AIInsight');
 
 // Get dashboard statistics
 const getDashboardStats = async (req, res) => {
@@ -12,33 +13,39 @@ const getDashboardStats = async (req, res) => {
             totalVolunteers,
             activeDisasters,
             totalContributions,
-            totalVolunteerHelps,
-            recentDisasters
+            pendingVerifications,
+            recentDisasters,
+            totalPredictions
         ] = await Promise.all([
             User.countDocuments(),
             User.countDocuments({ role: 'volunteer' }),
             Disaster.countDocuments({ status: { $in: ['active', 'ongoing'] } }),
             Contribution.countDocuments(),
-            VolunteerHelp.countDocuments(),
+            VolunteerHelp.countDocuments({ status: 'pending' }),
             Disaster.find({ status: { $in: ['active', 'ongoing'] } })
                 .sort({ createdAt: -1 })
-                .limit(5)
+                .limit(5),
+            AIInsight.countDocuments({ type: 'AI_PREDICTION' })
         ]);
 
-        // Calculate average response time (mock calculation)
-        const avgResponseTime = '2.3min';
-
-        // Get AI predictions count (mock for now)
-        const predictions = Math.floor(Math.random() * 20) + 5;
+        // Calculate average response time
+        const notifiedDisasters = await Disaster.find({ crpfNotified: true, crpfNotificationDate: { $ne: null } });
+        let totalResponseTime = 0;
+        notifiedDisasters.forEach(d => {
+            totalResponseTime += d.crpfNotificationDate - d.createdAt;
+        });
+        const avgResponseTimeInMs = notifiedDisasters.length > 0 ? totalResponseTime / notifiedDisasters.length : 0;
+        const avgResponseTime = `${(avgResponseTimeInMs / (1000 * 60)).toFixed(1)}min`;
 
         const stats = {
             activeDisasters,
-            predictions,
+            predictions: totalPredictions,
             contributions: totalContributions,
-            alerts: activeDisasters + Math.floor(Math.random() * 5),
+            alerts: activeDisasters, // Based on active disasters
             volunteers: totalVolunteers,
             users: totalUsers,
             responseTime: avgResponseTime,
+            pendingVerifications,
             recentDisasters
         };
 
@@ -58,7 +65,6 @@ const getRecentDisasters = async (req, res) => {
         const disasters = await Disaster.find()
             .sort({ createdAt: -1 })
             .limit(10)
-            .populate('reportedBy', 'name')
             .lean();
 
         const formattedDisasters = disasters.map(disaster => ({

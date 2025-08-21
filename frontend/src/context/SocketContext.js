@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import api from '../services/api';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
 import ExtremeDisasterAlert from '../components/Admin/ExtremeDisasterAlert';
@@ -10,7 +11,26 @@ export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
     const { user, isAuthenticated } = useAuth();
+
+    const fetchNotifications = async () => {
+        if (!isAuthenticated) return;
+        try {
+            const res = await api.get('/notifications/me');
+            setNotifications(res.data);
+            setUnreadCount(res.data.filter(n => !n.read).length);
+        } catch (error) {
+            console.error('Failed to fetch notifications', error);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchNotifications();
+        }
+    }, [isAuthenticated]);
 
     useEffect(() => {
         // Initialize socket connection for both authenticated and non-authenticated users
@@ -24,23 +44,9 @@ export const SocketProvider = ({ children }) => {
             console.log('Socket connected');
             setIsConnected(true);
 
-            // For authenticated users, join user-specific room
-            if (isAuthenticated && user) {
-                // Pass both userId and role to join appropriate rooms
-                newSocket.emit('join_user', {
-                    userId: user.id,
-                    role: user.role
-                });
-
-                // Join location-based room if user has location
-                if (user.location) {
-                    newSocket.emit('join_location', user.location);
-                }
-            }
-            
-            // For non-authenticated users with notifications enabled
-            if (!isAuthenticated && notificationsEnabled) {
-                newSocket.emit('join_public_notifications');
+            // For authenticated users, join location-based room if location is available
+            if (isAuthenticated && user && user.location) {
+                newSocket.emit('join_location', user.location);
             }
         });
 
@@ -51,63 +57,23 @@ export const SocketProvider = ({ children }) => {
 
         // Listen for disaster alerts
         newSocket.on('new_disaster_alert', (data) => {
-                toast.custom((t) => (
-                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
-                        <div className="flex-1 w-0 p-4">
-                            <div className="flex items-start">
-                                <div className="flex-shrink-0">
-                                    <div className="w-8 h-8 bg-danger-100 rounded-full flex items-center justify-center">
-                                        <span className="text-danger-600 text-sm font-bold">!</span>
-                                    </div>
-                                </div>
-                                <div className="ml-3 flex-1">
-                                    <p className="text-sm font-medium text-gray-900">
-                                        Disaster Alert
-                                    </p>
-                                    <p className="mt-1 text-sm text-gray-500">
-                                        {data.message}
-                                    </p>
-                                    <p className="mt-1 text-xs text-gray-400">
-                                        {new Date(data.timestamp).toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ), {
-                    duration: 8000,
-                });
-            });
+            toast.error(`🚨 ${data.message}`, { duration: 8000 });
+        });
+
+        // Listen for user-specific notifications
+        newSocket.on('new_notification', (data) => {
+            setNotifications(prev => [data, ...prev]);
+            setUnreadCount(prev => prev + 1);
+            toast.info(data.message, { icon: '🔔' });
+        });
 
         // Listen for local disaster alerts
         newSocket.on('local_disaster_alert', (data) => {
-                toast.custom((t) => (
-                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-warning-500`}>
-                        <div className="flex-1 w-0 p-4">
-                            <div className="flex items-start">
-                                <div className="flex-shrink-0">
-                                    <div className="w-8 h-8 bg-warning-100 rounded-full flex items-center justify-center">
-                                        <span className="text-warning-600 text-sm font-bold">⚠</span>
-                                    </div>
-                                </div>
-                                <div className="ml-3 flex-1">
-                                    <p className="text-sm font-medium text-gray-900">
-                                        Local Alert
-                                    </p>
-                                    <p className="mt-1 text-sm text-gray-500">
-                                        {data.message}
-                                    </p>
-                                    <p className="mt-1 text-xs text-gray-400">
-                                        {new Date(data.timestamp).toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ), {
-                    duration: 10000,
-                });
+            toast.error(`🚨 LOCAL ALERT: ${data.message} (${data.severity?.toUpperCase()})`, { 
+                duration: 15000,
+                position: 'top-center'
             });
+        });
 
         // Listen for points updates
         if (isAuthenticated && user) {
@@ -118,71 +84,15 @@ export const SocketProvider = ({ children }) => {
             // Listen for volunteer help opportunities
             if (user.role === 'volunteer') {
                 newSocket.on('volunteer_help_opportunity', (data) => {
-                    toast.custom((t) => (
-                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-primary-500`}>
-                            <div className="flex-1 w-0 p-4">
-                                <div className="flex items-start">
-                                    <div className="flex-shrink-0">
-                                        <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                                            <span className="text-primary-600 text-sm font-bold">🆘</span>
-                                        </div>
-                                    </div>
-                                    <div className="ml-3 flex-1">
-                                        <p className="text-sm font-medium text-gray-900">
-                                            Volunteer Help Needed
-                                        </p>
-                                        <p className="mt-1 text-sm text-gray-500">
-                                            {data.message}
-                                        </p>
-                                        <div className="mt-2 flex space-x-2">
-                                            <a 
-                                                href="/volunteer/sign-up" 
-                                                className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                                            >
-                                                Sign Up to Help
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ), {
-                        duration: 15000,
-                    });
+                    toast.info(`🆘 Volunteer Help Needed: ${data.message}`, { duration: 15000 });
                 });
             }
 
             // Listen for emergency messages
             newSocket.on('emergency_message', (data) => {
-                toast.custom((t) => (
-                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-danger-50 shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-danger-500 ring-opacity-5 border-l-4 border-danger-500`}>
-                        <div className="flex-1 w-0 p-4">
-                            <div className="flex items-start">
-                                <div className="flex-shrink-0">
-                                    <div className="w-8 h-8 bg-danger-100 rounded-full flex items-center justify-center">
-                                        <span className="text-danger-600 text-sm font-bold">🚨</span>
-                                    </div>
-                                </div>
-                                <div className="ml-3 flex-1">
-                                    <p className="text-sm font-medium text-danger-900">
-                                        Emergency Alert
-                                    </p>
-                                    <p className="mt-1 text-sm text-danger-700">
-                                        {data.message}
-                                    </p>
-                                    <p className="mt-1 text-xs text-danger-600">
-                                        {new Date(data.timestamp).toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ), {
-                    duration: 15000,
-                });
+                toast.error(`🚨 EMERGENCY: ${data.message}`, { duration: 15000 });
             });
-
-            }
+        }
         
         setSocket(newSocket);
 
@@ -201,12 +111,7 @@ export const SocketProvider = ({ children }) => {
     const enableNotifications = () => {
         setNotificationsEnabled(true);
         localStorage.setItem('notificationsEnabled', 'true');
-        
-        // If socket is already connected, join the public notifications room
-        if (socket && isConnected && !isAuthenticated) {
-            socket.emit('join_public_notifications');
-            toast.success('Notifications enabled successfully!');
-        }
+        toast.success('Notifications enabled successfully! Please refresh the page to see public alerts.');
     };
 
     // Check if notifications were previously enabled
@@ -222,7 +127,28 @@ export const SocketProvider = ({ children }) => {
         isConnected,
         emitEvent,
         notificationsEnabled,
-        enableNotifications
+        enableNotifications,
+        notifications,
+        unreadCount,
+        fetchNotifications,
+        markAsRead: async (id) => {
+            try {
+                await api.put(`/notifications/${id}/read`);
+                setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            } catch (error) {
+                console.error('Failed to mark notification as read', error);
+            }
+        },
+        markAllAsRead: async () => {
+            try {
+                await api.put('/notifications/read-all');
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                setUnreadCount(0);
+            } catch (error) {
+                console.error('Failed to mark all notifications as read', error);
+            }
+        }
     };
 
     return (

@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const Register = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, register } = useAuth();
 
     // Redirect if user is already logged in
     useEffect(() => {
@@ -105,16 +105,7 @@ const Register = () => {
                 })
             };
 
-            const response = await axios.post('/api/auth/register', registrationData);
-            
-            if (response.data.token) {
-                if (formData.role === 'volunteer') {
-                    toast.success('Registration successful! Your volunteer application is pending approval.');
-                } else {
-                    toast.success('Registration successful! You can now login.');
-                }
-                navigate('/login');
-            }
+            await register(registrationData);
         } catch (error) {
             const message = error.response?.data?.message || 'Registration failed';
             toast.error(message);

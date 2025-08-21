@@ -1,9 +1,8 @@
 const Contribution = require('../models/Contribution');
-const { broadcastDisasterAlert } = require('../sockets/socketHandler');
 const { awardPoints, POINT_VALUES } = require('./pointsController');
 
 // Create a new contribution
-exports.createContribution = async (req, res) => {
+const createContribution = async (req, res) => {
     try {
         const userId = req.user._id;
         const { disasterId, item, quantity, category, deliveryMethod, contactInfo } = req.body;
@@ -32,7 +31,7 @@ exports.createContribution = async (req, res) => {
 };
 
 // Get user contributions
-exports.getUserContributions = async (req, res) => {
+const getUserContributions = async (req, res) => {
     try {
         const { userId } = req.params;
         const contributions = await Contribution.find({ userId })
@@ -45,7 +44,7 @@ exports.getUserContributions = async (req, res) => {
 };
 
 // Get all contributions
-exports.getContributions = async (req, res) => {
+const getContributions = async (req, res) => {
     try {
         const contributions = await Contribution.find().populate('userId', 'name email').populate('disasterId', 'type location');
         res.json(contributions);
@@ -55,7 +54,7 @@ exports.getContributions = async (req, res) => {
 };
 
 // Get contribution by ID
-exports.getContributionById = async (req, res) => {
+const getContributionById = async (req, res) => {
     try {
         const contribution = await Contribution.findById(req.params.id).populate('userId', 'name email').populate('disasterId', 'type location');
         if (!contribution) return res.status(404).json({ message: 'Contribution not found' });
@@ -66,25 +65,56 @@ exports.getContributionById = async (req, res) => {
 };
 
 // Update contribution
-exports.updateContribution = async (req, res) => {
+const updateContribution = async (req, res) => {
     try {
+        const contribution = await Contribution.findById(req.params.id);
+
+        if (!contribution) {
+            return res.status(404).json({ message: 'Contribution not found' });
+        }
+
+        // Check if the user is the owner or an admin/crpf
+        if (contribution.userId.toString() !== req.user.id && !['admin', 'crpf'].includes(req.user.role)) {
+            return res.status(403).json({ message: 'User not authorized to update this contribution' });
+        }
+
         const { userId, disasterId, item, quantity, pointsEarned } = req.body;
         const updateData = { userId, disasterId, item, quantity, pointsEarned };
-        const contribution = await Contribution.findByIdAndUpdate(req.params.id, updateData, { new: true });
-        if (!contribution) return res.status(404).json({ message: 'Contribution not found' });
-        res.json(contribution);
+        const updatedContribution = await Contribution.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        
+        res.json(updatedContribution);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 };
 
 // Delete contribution
-exports.deleteContribution = async (req, res) => {
+const deleteContribution = async (req, res) => {
     try {
-        const contribution = await Contribution.findByIdAndDelete(req.params.id);
-        if (!contribution) return res.status(404).json({ message: 'Contribution not found' });
+        const contribution = await Contribution.findById(req.params.id);
+
+        if (!contribution) {
+            return res.status(404).json({ message: 'Contribution not found' });
+        }
+
+        // Check if the user is the owner or an admin/crpf
+        if (contribution.userId.toString() !== req.user.id && !['admin', 'crpf'].includes(req.user.role)) {
+            return res.status(403).json({ message: 'User not authorized to delete this contribution' });
+        }
+
+        await Contribution.findByIdAndDelete(req.params.id);
+        
         res.json({ message: 'Contribution deleted' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
+};
+
+module.exports = {
+    createContribution,
+    getUserContributions,
+    getContributions,
+    getContributionById,
+    updateContribution,
+    deleteContribution,
 }; 

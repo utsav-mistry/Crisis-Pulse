@@ -17,9 +17,11 @@ import {
     MapPin,
     Trophy,
     Activity,
-    ChevronDown
+    ChevronDown,
+    FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import NotificationBell from './NotificationBell';
 
 const Layout = () => {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -73,9 +75,11 @@ const Layout = () => {
                 items: [
                     { name: 'Admin Dashboard', path: '/admin/dashboard', icon: Shield },
                     { name: 'Test Panel', path: '/admin/test-panel', icon: Activity },
+                    { name: 'Test Logs', path: '/admin/test-logs', icon: FileText },
                     { name: 'User Management', path: '/admin/users', icon: Users },
                     { name: 'CRPF Notifications', path: '/admin/crpf-notifications', icon: Bell },
                     { name: 'Volunteer Verification', path: '/admin/volunteer-verification', icon: UserCheck },
+                    { name: 'Task Verification', path: '/admin/task-verification', icon: UserCheck },
                 ]
             });
         }
@@ -207,6 +211,7 @@ const Layout = () => {
 
                         {/* User Menu & Mobile Menu Button */}
                         <div className="flex items-center space-x-4">
+                            {user && <NotificationBell />}
                             {/* User Menu */}
                             {user && (
                                 <div className="relative">

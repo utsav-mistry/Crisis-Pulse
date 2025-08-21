@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
     Trophy, 
@@ -10,7 +10,8 @@ import {
     Users,
     Activity,
     Award,
-    Target
+    Target,
+    MapPin
 } from 'lucide-react';
 
 const Leaderboard = () => {
@@ -19,11 +20,13 @@ const Leaderboard = () => {
     const [userRank, setUserRank] = useState(null);
     const [timeFilter, setTimeFilter] = useState('all');
     const [categoryFilter, setCategoryFilter] = useState('all');
+    const [loading, setLoading] = useState(false);
 
     // Fetch real leaderboard data
     useEffect(() => {
         const fetchLeaderboard = async () => {
             try {
+                setLoading(true);
                 const response = await fetch('/api/points/leaderboard', {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -38,18 +41,28 @@ const Leaderboard = () => {
                     const leaderboardArray = Array.isArray(data) ? data : (data.leaderboard || []);
                     
                     if (leaderboardArray.length > 0) {
-                        setLeaderboardData(leaderboardArray.map(item => ({
-                            ...item,
-                            id: item._id || item.userId || item.id,
-                            name: item.name || item.user?.name || 'Unknown User',
-                            role: item.role || item.user?.role || 'user',
-                            location: item.location || (item.user?.location?.city ? `${item.user.location.city}${item.user.location.state ? `, ${item.user.location.state}` : ''}` : 'Unknown'),
-                            level: getLevel(item.points || 0),
-                            badges: item.achievements || [],
-                            points: item.points || 0,
-                            contributions: item.contributions || 0,
-                            helpLogs: item.helpLogs || 0
-                        })));
+                        const formattedData = leaderboardArray.map(item => {
+                            // Format location safely (handles string or {city, state} object)
+                            const formatLocation = (loc) => {
+                                if (!loc) return 'Unknown';
+                                if (typeof loc === 'string') return loc;
+                                return [loc.city, loc.state].filter(Boolean).join(', ') || 'Unknown';
+                            };
+                            
+                            return {
+                                ...item,
+                                id: item._id || item.userId || item.id,
+                                name: item.name || item.user?.name || 'Unknown User',
+                                role: item.role || item.user?.role || 'user',
+                                location: formatLocation(item.location || item.user?.location),
+                                level: getLevel(item.points || 0),
+                                badges: item.achievements || [],
+                                points: item.points || 0,
+                                contributions: item.contributions || 0,
+                                helpLogs: item.helpLogs || 0
+                            };
+                        });
+                        setLeaderboardData(formattedData);
 
                         // Find user rank
                         if (user) {
@@ -57,54 +70,18 @@ const Leaderboard = () => {
                             setUserRank(userIndex >= 0 ? userIndex + 1 : null);
                         }
                     } else {
-                        // Use mock data if no real data available
-                        setLeaderboardData([
-                            {
-                                id: '1',
-                                name: 'Sample User',
-                                role: 'volunteer',
-                                location: 'Mumbai',
-                                points: 1250,
-                                level: 'Advanced',
-                                badges: ['First Responder', 'Community Hero'],
-                                contributions: 15,
-                                helpLogs: 8
-                            }
-                        ]);
+                        // No data available
+                        setLeaderboardData([]);
                     }
                 } else {
                     console.error('Failed to fetch leaderboard:', response.status);
-                    // Use mock data as fallback
-                    setLeaderboardData([
-                        {
-                            id: '1',
-                            name: 'Sample User',
-                            role: 'volunteer',
-                            location: 'Mumbai',
-                            points: 1250,
-                            level: 'Advanced',
-                            badges: ['First Responder'],
-                            contributions: 15,
-                            helpLogs: 8
-                        }
-                    ]);
+                    setLeaderboardData([]);
                 }
             } catch (error) {
                 console.error('Error fetching leaderboard:', error);
-                // Use mock data as fallback
-                setLeaderboardData([
-                    {
-                        id: '1',
-                        name: 'Sample User',
-                        role: 'volunteer',
-                        location: 'Mumbai',
-                        points: 1250,
-                        level: 'Advanced',
-                        badges: ['First Responder'],
-                        contributions: 15,
-                        helpLogs: 8
-                    }
-                ]);
+                setLeaderboardData([]);
+            } finally {
+                setLoading(false);
             }
         };
 
@@ -250,7 +227,10 @@ const Leaderboard = () => {
                                     </span>
                                 </div>
                                 <h4 className="font-semibold text-neutral-900 mb-1">{volunteer.name}</h4>
-                                <p className="text-sm text-neutral-600 mb-2">{volunteer.location}</p>
+                                <div className="flex items-center justify-center text-sm text-neutral-600 mb-2">
+                                    <MapPin className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                                    <span className="truncate">{volunteer.location}</span>
+                                </div>
                                 <div className="text-xl font-bold text-primary-600 mb-2">
                                     {volunteer.points.toLocaleString()}
                                 </div>
@@ -276,7 +256,7 @@ const Leaderboard = () => {
                     <div className="space-y-3">
                         {leaderboardData.map((volunteer, index) => (
                             <div key={volunteer.id} className={`p-4 rounded-lg border transition-colors ${
-                                volunteer.name === (user?.name || 'You') 
+                                (volunteer.id === user?._id || volunteer.userId === user?._id)
                                     ? 'border-primary-200 bg-primary-50' 
                                     : 'border-neutral-200 hover:bg-neutral-50'
                             }`}>
@@ -293,11 +273,14 @@ const Leaderboard = () => {
                                         <div>
                                             <h4 className="font-medium text-neutral-900">
                                                 {volunteer.name}
-                                                {volunteer.name === (user?.name || 'You') && (
+                                                {(volunteer.id === user?._id || volunteer.userId === user?._id) && (
                                                     <span className="ml-2 text-sm text-primary-600">(You)</span>
                                                 )}
                                             </h4>
-                                            <p className="text-sm text-neutral-600">{volunteer.location}</p>
+                                            <div className="flex items-center text-sm text-neutral-600">
+                                                <MapPin className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                                                <span className="truncate">{volunteer.location}</span>
+                                            </div>
                                             <div className="flex flex-wrap gap-1 mt-1">
                                                 {volunteer.badges.slice(0, 2).map((badge, badgeIndex) => (
                                                     <span key={badgeIndex} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">

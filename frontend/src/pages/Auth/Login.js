@@ -38,10 +38,8 @@ const Login = () => {
 
         try {
             await login(formData.email, formData.password);
-            toast.success('Login successful');
-            navigate('/');
         } catch (error) {
-            toast.error(error.message || 'Login failed');
+            // Error is handled and toasted by AuthContext
         } finally {
             setIsLoading(false);
         }

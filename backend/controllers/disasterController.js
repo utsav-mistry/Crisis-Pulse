@@ -1,99 +1,7 @@
 const Disaster = require('../models/Disaster');
 const CrpfNotification = require('../models/CrpfNotification');
 const Notification = require('../models/Notification');
-
-// Create a new disaster
-exports.createDisaster = async (req, res) => {
-    try {
-        const { type, location, severity, source, predictionDate, raisedBy, reportedBy, message, title, description, status } = req.body;
-        
-        // Use the authenticated user's ID if raisedBy/reportedBy not provided
-        const userId = raisedBy || reportedBy || req.user?.id;
-        
-        const disaster = new Disaster({ 
-            type, 
-            location, 
-            severity, 
-            source: source || 'manual',
-            predictionDate,
-            raisedBy: userId,
-            title: title || `${severity} ${type} disaster`,
-            description: description || message || `${severity} level ${type} disaster reported in ${location?.city || 'unknown location'}`,
-            status: status || 'active'
-        });
-        await disaster.save();
-        
-        // Create notification for the disaster
-        const notification = new Notification({
-            type,
-            location,
-            severity,
-            message: message || `${severity} ${type} disaster in ${location.city}, ${location.state}`,
-            advice: getAdviceForDisaster(type, severity)
-        });
-        await notification.save();
-        
-        // If severity is high, create a CRPF notification entry
-        if (severity === 'high') {
-            const crpfNotification = new CrpfNotification({
-                disasterId: disaster._id,
-                notifiedBy: raisedBy,
-                message: `High severity ${type} detected in ${location.city}, ${location.state}. CRPF teams have been automatically alerted.`,
-                priority: 'high',
-                crpfUnits: [
-                    'CRPF Battalion 123 - Delhi',
-                    'CRPF Battalion 456 - Mumbai', 
-                    'Emergency Response Team Alpha'
-                ]
-            });
-            await crpfNotification.save();
-            
-            // Simulate CRPF notification process
-            setTimeout(async () => {
-                crpfNotification.status = 'notified';
-                crpfNotification.notifiedAt = new Date();
-                await crpfNotification.save();
-            }, 3000);
-            
-            // Get the socket.io instance from the app
-            const io = req.app.get('io');
-            
-            // Broadcast to admin users
-            io.to('role_admin').emit('extreme_disaster_alert', {
-                id: disaster._id,
-                type,
-                location,
-                severity,
-                message: message || `EXTREME ALERT: ${type} disaster in ${location.city}, ${location.state}`,
-                crpfNotificationId: crpfNotification._id,
-                crpfStatus: 'CRPF teams automatically notified',
-                timestamp: new Date()
-            });
-
-            // Broadcast CRPF notification to all users
-            io.emit('crpf_notification', {
-                message: `🚨 CRPF Emergency Response Teams have been notified of high-severity ${type} in ${location.city}`,
-                disasterId: disaster._id,
-                crpfUnits: crpfNotification.crpfUnits,
-                timestamp: new Date()
-            });
-        }
-        
-        // Broadcast the disaster alert using the global function
-        if (global.broadcastDisasterAlert) {
-            global.broadcastDisasterAlert({
-                type,
-                location,
-                severity,
-                message: message || `${severity} ${type} disaster in ${location.city}, ${location.state}`
-            });
-        }
-        
-        res.status(201).json(disaster);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-};
+const TestLog = require('../models/TestLog');
 
 // Helper function to get advice based on disaster type and severity
 const getAdviceForDisaster = (type, severity) => {
@@ -143,8 +51,102 @@ const getAdviceForDisaster = (type, severity) => {
     return adviceMap[type]?.[severity] || 'Stay alert and follow official instructions.';
 };
 
+// Create a new disaster
+const createDisaster = async (req, res) => {
+    const { type, location, severity, source, predictionDate, raisedBy, reportedBy, message, title, description, status, test } = req.body;
+
+    try {
+        if (test) {
+            const testLog = new TestLog({
+                admin: req.user.id,
+                action: 'raise_disaster',
+                details: req.body
+            });
+            await testLog.save();
+        }
+
+        const userId = raisedBy || reportedBy || req.user?.id;
+        
+        const disaster = new Disaster({
+            type,
+            location,
+            severity,
+            source: source || 'manual',
+            predictionDate,
+            raisedBy: userId,
+            title: (test ? '[TEST] ' : '') + (title || `${severity} ${type} disaster`),
+            description: description || message || `${severity} level ${type} disaster reported in ${location?.city || 'unknown location'}`,
+            status: status || 'active'
+        });
+        await disaster.save();
+
+        const notification = new Notification({
+            type,
+            location,
+            severity,
+            message: (test ? '[TEST] ' : '') + (message || `${severity} ${type} disaster in ${location.city}, ${location.state}`),
+            advice: getAdviceForDisaster(type, severity)
+        });
+        await notification.save();
+
+        if (severity === 'high') {
+            const crpfNotification = new CrpfNotification({
+                disasterId: disaster._id,
+                notifiedBy: raisedBy,
+                message: (test ? '[TEST] ' : '') + `High severity ${type} detected in ${location.city}, ${location.state}. CRPF teams have been automatically alerted.`,
+                priority: 'high',
+                crpfUnits: [
+                    'CRPF Battalion 123 - Delhi',
+                    'CRPF Battalion 456 - Mumbai',
+                    'Emergency Response Team Alpha'
+                ]
+            });
+            await crpfNotification.save();
+
+            setTimeout(async () => {
+                crpfNotification.status = 'notified';
+                crpfNotification.notifiedAt = new Date();
+                await crpfNotification.save();
+            }, 3000);
+
+            const io = req.app.get('io');
+
+            io.to('role_admin').emit('extreme_disaster_alert', {
+                id: disaster._id,
+                type,
+                location,
+                severity,
+                message: (test ? '[TEST] ' : '') + (message || `EXTREME ALERT: ${type} disaster in ${location.city}, ${location.state}`),
+                crpfNotificationId: crpfNotification._id,
+                crpfStatus: 'CRPF teams automatically notified',
+                timestamp: new Date()
+            });
+
+            io.emit('crpf_notification', {
+                message: (test ? '[TEST] ' : '') + `🚨 CRPF Emergency Response Teams have been notified of high-severity ${type} in ${location.city}`,
+                disasterId: disaster._id,
+                crpfUnits: crpfNotification.crpfUnits,
+                timestamp: new Date()
+            });
+        }
+
+        if (global.broadcastDisasterAlert) {
+            global.broadcastDisasterAlert({
+                type,
+                location,
+                severity,
+                message: (test ? '[TEST] ' : '') + (message || `${severity} ${type} disaster in ${location.city}, ${location.state}`)
+            });
+        }
+
+        res.status(201).json(disaster);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 // Get all disasters
-exports.getDisasters = async (req, res) => {
+const getDisasters = async (req, res) => {
     try {
         const disasters = await Disaster.find().populate('raisedBy', 'name email');
         res.json(disasters);
@@ -154,7 +156,7 @@ exports.getDisasters = async (req, res) => {
 };
 
 // Get disaster by ID
-exports.getDisasterById = async (req, res) => {
+const getDisasterById = async (req, res) => {
     try {
         const disaster = await Disaster.findById(req.params.id).populate('raisedBy', 'name email');
         if (!disaster) return res.status(404).json({ message: 'Disaster not found' });
@@ -165,7 +167,7 @@ exports.getDisasterById = async (req, res) => {
 };
 
 // Update disaster
-exports.updateDisaster = async (req, res) => {
+const updateDisaster = async (req, res) => {
     try {
         const { type, location, severity, source, predictionDate, raisedBy } = req.body;
         const updateData = { type, location, severity, source, predictionDate, raisedBy };
@@ -178,7 +180,7 @@ exports.updateDisaster = async (req, res) => {
 };
 
 // Delete disaster
-exports.deleteDisaster = async (req, res) => {
+const deleteDisaster = async (req, res) => {
     try {
         const disaster = await Disaster.findByIdAndDelete(req.params.id);
         if (!disaster) return res.status(404).json({ message: 'Disaster not found' });
@@ -186,4 +188,65 @@ exports.deleteDisaster = async (req, res) => {
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
+};
+
+const createDisasterFromAI = async (req, res) => {
+    const { type, location, description, severity, source } = req.body;
+
+    try {
+        const disaster = new Disaster({
+            type,
+            location,
+            severity,
+            source,
+            title: `AI Detected: ${severity} ${type}`,
+            description,
+            status: 'active',
+            raisedBy: null // System generated
+        });
+        await disaster.save();
+
+        const notification = new Notification({
+            type,
+            location,
+            severity,
+            message: `A high-risk ${type} has been detected near ${location}. Please stay safe.`,
+            advice: getAdviceForDisaster(type, severity)
+        });
+        await notification.save();
+
+        if (severity === 'high') {
+            const crpfNotification = new CrpfNotification({
+                disasterId: disaster._id,
+                message: `High severity ${type} detected in ${location}. CRPF teams have been automatically alerted.`,
+                priority: 'high',
+                crpfUnits: ['CRPF Rapid Action Force', 'National Disaster Response Force']
+            });
+            await crpfNotification.save();
+
+            const io = req.app.get('io');
+            if (io) {
+                io.emit('new-disaster', disaster);
+                io.emit('crpf_notification', {
+                    message: `🚨 CRPF Emergency Response Teams have been notified of high-severity ${type} in ${location}`,
+                    disasterId: disaster._id,
+                    timestamp: new Date()
+                });
+            }
+        }
+
+        res.status(201).json(disaster);
+    } catch (error) {
+        console.error('Error creating disaster from AI:', error);
+        res.status(500).json({ message: 'Failed to create disaster from AI prediction' });
+    }
+};
+
+module.exports = {
+    createDisaster,
+    getDisasters,
+    getDisasterById,
+    updateDisaster,
+    deleteDisaster,
+    createDisasterFromAI
 };

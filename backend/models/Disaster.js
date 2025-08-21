@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const disasterSchema = new mongoose.Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
-    type: { type: String, required: true, enum: ['flood', 'earthquake', 'fire', 'storm', 'drought', 'other'] },
+    type: { type: String, required: true, enum: ['flood', 'earthquake', 'fire', 'storm', 'drought', 'cyclone', 'wildfire', 'landslide', 'tsunami', 'heatwave', 'other'] },
     location: {
         city: String,
         state: String,

@@ -2,9 +2,16 @@ const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notificationController');
 const getLLMAdvice = require('../utils/getLLMAdvice');
+const { authMiddleware, authorize } = require('../middleware/authMiddleware');
 
 // AI advice endpoint
-router.post('/ai-advice', async (req, res) => {
+// User-specific notification routes
+router.get('/me', authMiddleware, notificationController.getUserNotifications);
+router.put('/read-all', authMiddleware, notificationController.markAllNotificationsAsRead);
+router.put('/:id/read', authMiddleware, notificationController.markNotificationAsRead);
+
+// AI advice endpoint
+router.post('/ai-advice', authMiddleware, async (req, res) => {
     try {
         const { type, location, severity } = req.body;
         const advice = await getLLMAdvice(type, location?.city, severity);
@@ -14,14 +21,15 @@ router.post('/ai-advice', async (req, res) => {
     }
 });
 
-router.post('/', notificationController.createNotification);
-router.get('/', notificationController.getNotifications);
-router.get('/:id', notificationController.getNotificationById);
-router.put('/:id', notificationController.updateNotification);
-router.delete('/:id', notificationController.deleteNotification);
+// Admin routes for managing all notifications
+router.post('/', authMiddleware, authorize('admin'), notificationController.createNotification);
+router.get('/', authMiddleware, authorize('admin'), notificationController.getNotifications);
+router.get('/:id', authMiddleware, authorize('admin'), notificationController.getNotificationById);
+router.put('/:id', authMiddleware, authorize('admin'), notificationController.updateNotification);
+router.delete('/:id', authMiddleware, authorize('admin'), notificationController.deleteNotification);
 
 // Public endpoints (no auth required)
 router.get('/public/latest', notificationController.getLatestPublicNotifications);
-router.post('/broadcast', notificationController.broadcastNotification);
+router.post('/broadcast', authMiddleware, authorize('admin'), notificationController.broadcastNotification);
 
 module.exports = router;

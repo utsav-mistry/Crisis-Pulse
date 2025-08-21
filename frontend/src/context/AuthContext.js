@@ -1,152 +1,118 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
 const AuthContext = createContext();
 
-const initialState = {
-    user: null,
-    token: localStorage.getItem('token'),
-    isAuthenticated: false,
-    loading: true,
-};
-
-const authReducer = (state, action) => {
-    switch (action.type) {
-        case 'LOGIN_START':
-            return {
-                ...state,
-                loading: true,
-            };
-        case 'LOGIN_SUCCESS':
-            return {
-                ...state,
-                user: action.payload.user,
-                token: action.payload.token,
-                isAuthenticated: true,
-                loading: false,
-            };
-        case 'LOGIN_FAILURE':
-            return {
-                ...state,
-                user: null,
-                token: null,
-                isAuthenticated: false,
-                loading: false,
-            };
-        case 'LOGOUT':
-            return {
-                ...state,
-                user: null,
-                token: null,
-                isAuthenticated: false,
-                loading: false,
-            };
-        case 'UPDATE_USER':
-            return {
-                ...state,
-                user: { ...state.user, ...action.payload },
-            };
-        default:
-            return state;
-    }
-};
-
 export const AuthProvider = ({ children }) => {
-    const [state, dispatch] = useReducer(authReducer, initialState);
+    const [user, setUser] = useState(null);
+    const [token, setToken] = useState(localStorage.getItem('token'));
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     // Check if user is authenticated on app load
     useEffect(() => {
         const checkAuth = async () => {
-            const token = localStorage.getItem('token');
-            if (token) {
-                // Set the token in api defaults immediately
-                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            const storedToken = localStorage.getItem('token');
+            if (storedToken) {
+                api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
                 try {
-                    const response = await api.get('/api/users/me');
-                    dispatch({
-                        type: 'LOGIN_SUCCESS',
-                        payload: { user: response.data, token },
-                    });
+                    const response = await api.get('/users/me');
+                    setUser(response.data);
+                    setToken(storedToken);
+                    setIsAuthenticated(true);
                 } catch (error) {
                     localStorage.removeItem('token');
                     delete api.defaults.headers.common['Authorization'];
-                    dispatch({ type: 'LOGIN_FAILURE' });
+                    setUser(null);
+                    setToken(null);
+                    setIsAuthenticated(false);
                 }
-            } else {
-                dispatch({ type: 'LOGIN_FAILURE' });
             }
+            setLoading(false);
         };
 
         checkAuth();
     }, []);
 
     const login = async (email, password) => {
-        dispatch({ type: 'LOGIN_START' });
+        setLoading(true);
         try {
-            const response = await api.post('/api/auth/login', { email, password });
-            const { token, user } = response.data;
+            const response = await api.post('/auth/login', { email, password });
+            const data = response.data;
+            
+            const userToken = data.token;
+            const userData = {
+                _id: data._id,
+                name: data.name,
+                email: data.email,
+                role: data.role,
+                location: data.location,
+                points: data.points || 0,
+                volunteerStatus: data.volunteerStatus
+            };
 
-            localStorage.setItem('token', token);
-            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            localStorage.setItem('token', userToken);
+            api.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
 
-            dispatch({
-                type: 'LOGIN_SUCCESS',
-                payload: { user, token },
-            });
+            setUser(userData);
+            setToken(userToken);
+            setIsAuthenticated(true);
+            setLoading(false);
 
             toast.success('Login successful!');
-
-            // Redirect based on user role
-            if (user.role === 'admin') {
-                navigate('/admin');
-            } else {
-                navigate('/dashboard');
-            }
+            navigate(userData.role === 'admin' ? '/admin/dashboard' : '/dashboard');
         } catch (error) {
-            dispatch({ type: 'LOGIN_FAILURE' });
+            setLoading(false);
             toast.error(error.response?.data?.message || 'Login failed');
+            throw error;
         }
     };
 
     const register = async (userData) => {
-        dispatch({ type: 'LOGIN_START' });
+        setLoading(true);
         try {
-            const response = await api.post('/api/auth/register', userData);
-            const { token, user } = response.data;
+            const response = await api.post('/auth/register', userData);
+            const { token: userToken, user: userInfo } = response.data;
 
-            localStorage.setItem('token', token);
-            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            localStorage.setItem('token', userToken);
+            api.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
 
-            dispatch({
-                type: 'LOGIN_SUCCESS',
-                payload: { user, token },
-            });
+            setUser(userInfo);
+            setToken(userToken);
+            setIsAuthenticated(true);
+            setLoading(false);
 
             toast.success('Registration successful!');
             navigate('/dashboard');
         } catch (error) {
-            dispatch({ type: 'LOGIN_FAILURE' });
+            setLoading(false);
             toast.error(error.response?.data?.message || 'Registration failed');
+            throw error;
         }
     };
 
     const logout = () => {
         localStorage.removeItem('token');
         delete api.defaults.headers.common['Authorization'];
-        dispatch({ type: 'LOGOUT' });
+        setUser(null);
+        setToken(null);
+        setIsAuthenticated(false);
         navigate('/');
         toast.success('Logged out successfully');
     };
 
     const updateUser = (userData) => {
-        dispatch({ type: 'UPDATE_USER', payload: userData });
+        setUser(prev => ({ ...prev, ...userData }));
     };
 
     const value = {
-        ...state,
+        user,
+        token,
+        isAuthenticated,
+        loading,
         login,
         register,
         logout,

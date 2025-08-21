@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const { authMiddleware, requireAdmin } = require('../middleware/authMiddleware');
+const { authMiddleware, authorize } = require('../middleware/authMiddleware');
 
 // GET /api/users/profile - Current user profile (matching test expectations)
 router.get('/profile', authMiddleware, userController.getCurrentUser);
@@ -28,7 +28,7 @@ router.get('/:id', userController.getUserById);
 router.patch('/:id', userController.updateUser);
 
 // Admin routes - require authentication first
-router.get('/', authMiddleware, requireAdmin, userController.getUsers);
-router.delete('/:id', authMiddleware, requireAdmin, userController.deleteUser);
+router.get('/', authMiddleware, authorize('admin'), userController.getUsers);
+router.delete('/:id', authMiddleware, authorize('admin'), userController.deleteUser);
 
 module.exports = router;

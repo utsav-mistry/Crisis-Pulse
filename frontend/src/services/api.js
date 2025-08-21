@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
+    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
@@ -38,40 +38,40 @@ api.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-    login: (credentials) => api.post('/api/auth/login', credentials),
-    register: (userData) => api.post('/api/auth/register', userData),
-    getCurrentUser: () => api.get('/api/users/me'),
-    updateUser: (userId, userData) => api.patch(`/api/users/${userId}`, userData),
+    login: (credentials) => api.post('/auth/login', credentials),
+    register: (userData) => api.post('/auth/register', userData),
+    getCurrentUser: () => api.get('/users/me'),
+    updateUser: (userId, userData) => api.patch(`/users/${userId}`, userData),
 };
 
 // Disaster API
 export const disasterAPI = {
-    getAll: () => api.get('/api/disasters'),
-    getById: (id) => api.get(`/api/disasters/${id}`),
-    create: (disasterData) => api.post('/api/disasters/raise', disasterData),
-    update: (id, disasterData) => api.put(`/api/disasters/${id}`, disasterData),
-    delete: (id) => api.delete(`/api/disasters/${id}`),
+    getAll: () => api.get('/disasters'),
+    getById: (id) => api.get(`/disasters/${id}`),
+    create: (disasterData) => api.post('/disasters/raise', disasterData),
+    update: (id, disasterData) => api.put(`/disasters/${id}`, disasterData),
+    delete: (id) => api.delete(`/disasters/${id}`),
 };
 
 // Contribution API
 export const contributionAPI = {
-    contribute: (contributionData) => api.post('/api/contribute', contributionData),
-    getUserContributions: (userId) => api.get(`/api/contributions/user/${userId}`),
+    contribute: (contributionData) => api.post('/contribute', contributionData),
+    getUserContributions: (userId) => api.get(`/contributions/user/${userId}`),
 };
 
 // Notification API
 export const notificationAPI = {
-    broadcast: (notificationData) => api.post('/api/notifications/broadcast', notificationData),
-    getLatest: () => api.get('/api/notifications/latest'),
+    broadcast: (notificationData) => api.post('/notifications/broadcast', notificationData),
+    getLatest: () => api.get('/notifications/latest'),
 };
 
 // User API
 export const userAPI = {
-    getAll: () => api.get('/api/users'),
-    getById: (id) => api.get(`/api/users/${id}`),
-    getByLocation: (city) => api.get(`/api/users/nearby/${city}`),
-    getPoints: (userId) => api.get(`/api/users/${userId}/points`),
-    delete: (id) => api.delete(`/api/users/${id}`),
+    getAll: () => api.get('/users'),
+    getById: (id) => api.get(`/users/${id}`),
+    getByLocation: (city) => api.get(`/users/nearby/${city}`),
+    getPoints: (userId) => api.get(`/users/${userId}/points`),
+    delete: (id) => api.delete(`/users/${id}`),
 };
 
 // AI Service API (Django endpoints on port 8000)

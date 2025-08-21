@@ -7,6 +7,7 @@ const { apiLimiter, authLimiter } = require('./middleware/rateLimiter');
 require('dotenv').config({ path: './config.env' });
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
@@ -32,16 +33,15 @@ app.use('/api/disasters', require('./routes/disasterRoutes'));
 app.use('/api/contributions', require('./routes/contributionRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api', require('./routes/aiRoutes')); // AI service routes
-app.use('/api/admin', require('./routes/adminRoutes')); // Admin routes
-app.use('/api/setup', require('./routes/setupRoutes')); // Setup routes
-const volunteerHelpRoutes = require('./routes/volunteerHelpRoutes');
-const crpfNotificationRoutes = require('./routes/crpfNotificationRoutes');
-const pointsRoutes = require('./routes/pointsRoutes');
-app.use('/api/crpf-notifications', crpfNotificationRoutes);
-app.use('/api/volunteer-help', volunteerHelpRoutes);
-app.use('/api/points', pointsRoutes);
-app.use('/api/dashboard', require('./routes/dashboardRoutes'));
+app.use('/api', require('./routes/aiRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes')); // Consolidated admin routes
+app.use('/api/setup', require('./routes/setupRoutes'));
+app.use('/api/crpf-notifications', require('./routes/crpfNotificationRoutes'));
+app.use('/api/volunteer-help', require('./routes/volunteerHelpRoutes'));
+app.use('/api/volunteer-tasks', require('./routes/volunteerTaskRoutes'));
+app.use('/api/points', require('./routes/pointsRoutes'));
+app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
+app.use('/api/live-feed', require('./routes/liveFeedRoutes'));
 
 // Socket Setup
 require('./sockets/socketHandler')(io);
@@ -54,10 +54,14 @@ if (process.env.NODE_ENV !== 'test') {
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {
         console.log(`Crisis Pulse backend running on port ${PORT}`);
-        
+
         // Initialize cron jobs
         const { scheduleVolunteerHelpCron } = require('./cron/volunteerHelpCron');
+        const { scheduleDisasterAICron } = require('./cron/disasterAICron');
+        const { scheduleVolunteerTaskCron } = require('./cron/volunteerTaskCron');
         scheduleVolunteerHelpCron();
+        scheduleDisasterAICron(io);
+        scheduleVolunteerTaskCron();
         console.log('Cron jobs initialized');
     });
 }

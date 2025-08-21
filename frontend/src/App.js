@@ -35,11 +35,15 @@ import AdminTestPanel from './pages/Admin/AdminTestPanel';
 import CrpfNotifications from './pages/Admin/CrpfNotifications';
 import VolunteerHelpVerification from './pages/Admin/VolunteerHelpVerification';
 import UserManagement from './pages/Admin/UserManagement';
+import SubscriptionsPage from './pages/Admin/SubscriptionsPage';
+import AdminVolunteerVerification from './pages/Admin/AdminVolunteerVerification';
+import AdminTestLogs from './pages/Admin/AdminTestLogs';
 
 // Volunteer Pages
 import LogHelp from './pages/Volunteer/LogHelp';
 import HelpLogDetail from './pages/Volunteer/HelpLogDetail';
 import SignUpForHelp from './pages/Volunteer/SignUpForHelp';
+import VolunteerDashboard from './pages/Volunteer/VolunteerDashboard';
 
 // Styles
 import './index.css';
@@ -110,6 +114,21 @@ function App() {
                                         <UserManagement />
                                     </ProtectedRoute>
                                 } />
+                                <Route path="admin/subscriptions" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <SubscriptionsPage />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="admin/task-verification" element={
+                                    <ProtectedRoute requiredRole="admin">
+                                        <AdminVolunteerVerification />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="admin/test-logs" element={ 
+                                    <ProtectedRoute requiredRole="admin">
+                                        <AdminTestLogs />
+                                    </ProtectedRoute>
+                                } />
 
                                 {/* Volunteer Routes */}
                                 <Route path="volunteer/log-help" element={
@@ -120,6 +139,11 @@ function App() {
                                 <Route path="volunteer/help-log/:id" element={
                                     <ProtectedRoute requiredRole="volunteer">
                                         <HelpLogDetail />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="volunteer/dashboard" element={
+                                    <ProtectedRoute requiredRole="volunteer">
+                                        <VolunteerDashboard />
                                     </ProtectedRoute>
                                 } />
                             </Route>

@@ -2,7 +2,7 @@ const CrpfNotification = require('../models/CrpfNotification');
 const Disaster = require('../models/Disaster');
 
 // Get all CRPF notifications
-exports.getCrpfNotifications = async (req, res) => {
+const getCrpfNotifications = async (req, res) => {
     try {
         const notifications = await CrpfNotification.find()
             .populate('disasterId')
@@ -14,7 +14,7 @@ exports.getCrpfNotifications = async (req, res) => {
 };
 
 // Get CRPF notification by ID
-exports.getCrpfNotificationById = async (req, res) => {
+const getCrpfNotificationById = async (req, res) => {
     try {
         const notification = await CrpfNotification.findById(req.params.id)
             .populate('disasterId')
@@ -27,7 +27,7 @@ exports.getCrpfNotificationById = async (req, res) => {
 };
 
 // Update CRPF notification status
-exports.updateCrpfNotificationStatus = async (req, res) => {
+const updateCrpfNotificationStatus = async (req, res) => {
     try {
         const { status } = req.body;
         
@@ -49,7 +49,7 @@ exports.updateCrpfNotificationStatus = async (req, res) => {
 };
 
 // Get pending CRPF notifications
-exports.getPendingCrpfNotifications = async (req, res) => {
+const getPendingCrpfNotifications = async (req, res) => {
     try {
         const notifications = await CrpfNotification.find({ status: 'pending' })
             .populate('disasterId')
@@ -61,7 +61,7 @@ exports.getPendingCrpfNotifications = async (req, res) => {
 };
 
 // Create manual CRPF notification
-exports.createManualCrpfNotification = async (req, res) => {
+const createManualCrpfNotification = async (req, res) => {
     try {
         const { title, message, priority } = req.body;
         
@@ -88,6 +88,11 @@ exports.createManualCrpfNotification = async (req, res) => {
         const populatedNotification = await CrpfNotification.findById(crpfNotification._id)
             .populate('notifiedBy', 'name email');
 
+        // Broadcast the notification via sockets
+        if (global.broadcastCrpfNotification) {
+            global.broadcastCrpfNotification(populatedNotification);
+        }
+
         res.status(201).json(populatedNotification);
     } catch (error) {
         console.error('Error creating manual CRPF notification:', error);
@@ -96,7 +101,7 @@ exports.createManualCrpfNotification = async (req, res) => {
 };
 
 // Create dummy CRPF notification for high-severity disasters
-exports.createCrpfNotification = async (disasterId, notifiedBy) => {
+const createCrpfNotification = async (disasterId, notifiedBy) => {
     try {
         const disaster = await Disaster.findById(disasterId);
         if (!disaster) return null;
@@ -131,4 +136,13 @@ exports.createCrpfNotification = async (disasterId, notifiedBy) => {
         console.error('Error creating CRPF notification:', error);
         return null;
     }
+};
+
+module.exports = {
+    getCrpfNotifications,
+    getCrpfNotificationById,
+    updateCrpfNotificationStatus,
+    getPendingCrpfNotifications,
+    createManualCrpfNotification,
+    createCrpfNotification
 };

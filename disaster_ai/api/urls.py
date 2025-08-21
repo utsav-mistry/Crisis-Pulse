@@ -23,4 +23,8 @@ urlpatterns = [
     # Health check and status
     path('health/', views.health_check, name='health_check'),
     path('status/', views.service_status, name='service_status'),
+    
+    # Live feed endpoints
+    path('live-feed/start/', views.start_live_feed, name='start_live_feed'),
+    path('live-feed/stop/', views.stop_live_feed, name='stop_live_feed'),
 ] 

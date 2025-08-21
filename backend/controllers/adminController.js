@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const TestLog = require('../models/TestLog');
 
 // Get all users with filtering and pagination
 const getAllUsers = async (req, res) => {
@@ -361,6 +362,37 @@ const toggleUserBan = async (req, res) => {
     }
 };
 
+// Send AI-generated safety advice
+const sendAiAdvice = async (req, res) => {
+    const { message, test } = req.body;
+
+    try {
+        if (test) {
+            await new TestLog({
+                admin: req.user.id,
+                action: 'simulate_ai_advice',
+                details: req.body
+            }).save();
+        }
+
+        const notification = new Notification({
+            type: 'ai_advice',
+            title: 'AI Safety Advice',
+            message: (test ? '[TEST] ' : '') + message,
+            priority: 'high'
+        });
+        await notification.save();
+
+        const io = req.app.get('io');
+        io.emit('new_notification', notification);
+
+        res.status(200).json({ message: 'AI advice sent successfully' });
+    } catch (error) {
+        console.error('Error sending AI advice:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     getAllUsers,
     approveVolunteer,
@@ -368,5 +400,6 @@ module.exports = {
     suspendVolunteer,
     getVolunteerStats,
     createAdmin,
-    toggleUserBan
+    toggleUserBan,
+    sendAiAdvice
 };

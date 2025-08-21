@@ -1,83 +1,68 @@
 const Disaster = require('../models/Disaster');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const Subscription = require('../models/Subscription');
+const axios = require('axios');
+const jwt = require('jsonwebtoken');
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
+const connectedUsers = new Map();
 
 module.exports = (io) => {
+    // Middleware for socket authentication
+    io.use((socket, next) => {
+        const token = socket.handshake.auth.token;
+        if (!token) {
+            // Allow unauthenticated users for public notifications
+            socket.user = { role: 'public' };
+            return next();
+        }
+
+        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+            if (err) {
+                return next(new Error('Authentication error'));
+            }
+            socket.user = decoded; // Decoded token has user id, role
+            next();
+        });
+    });
+
     io.on('connection', (socket) => {
-        console.log('User connected:', socket.id);
+        console.log('User connected:', socket.id, 'with role:', socket.user.role);
+        
+        // Add user to connected users map
+        if (socket.user.id) {
+            connectedUsers.set(socket.user.id, { id: socket.user.id, role: socket.user.role, socketId: socket.id });
+            io.to('role_admin').to('role_crpf').emit('user_connected', { userId: socket.user.id, role: socket.user.role });
+        }
+
+        // Join user-specific room
+        if (socket.user.id) {
+            socket.join(`user_${socket.user.id}`);
+            console.log(`User ${socket.user.id} joined their personal room.`);
+        }
+
+        // Join role-based rooms
+        if (socket.user.role === 'admin') {
+            socket.join('role_admin');
+            console.log(`Admin user ${socket.user.id} joined admin room.`);
+        } else if (socket.user.role === 'crpf') {
+            socket.join('role_crpf');
+            console.log(`CRPF user ${socket.user.id} joined CRPF room.`);
+        } else if (socket.user.role === 'public') {
+            socket.join('public_notifications');
+            console.log(`Public user ${socket.id} joined public notifications room.`);
+        }
 
         // Join location-based room
         socket.on('join_location', (location) => {
-            socket.join(`location_${location.city}_${location.state}`);
-            console.log(`User joined location: ${location.city}, ${location.state}`);
-        });
-
-        // Join user-specific room
-        socket.on('join_user', (userData) => {
-            const { userId, role } = userData;
-            socket.join(`user_${userId}`);
-            console.log(`User joined personal room: ${userId}`);
-            
-            // If user is admin, join admin room
-            if (role === 'admin') {
-                socket.join('role_admin');
-                console.log(`Admin user joined admin room: ${userId}`);
+            if (location && location.city && location.state) {
+                socket.join(`location_${location.city}_${location.state}`);
+                console.log(`User ${socket.id} joined location: ${location.city}, ${location.state}`);
             }
         });
-        
-        // Join public notifications room for non-logged in users
-        socket.on('join_public_notifications', () => {
-            socket.join('public_notifications');
-            console.log(`User joined public notifications room: ${socket.id}`);
-        });
 
-        // Handle disaster alerts
-        socket.on('disaster_alert', async (data) => {
-            try {
-                // Create notification
-                const notification = new Notification({
-                    type: data.type,
-                    location: data.location,
-                    severity: data.severity,
-                    message: data.message,
-                    broadcastTo: 'all'
-                });
-                await notification.save();
-
-                // Broadcast to all users
-                io.emit('new_disaster_alert', {
-                    id: notification._id,
-                    type: data.type,
-                    location: data.location,
-                    severity: data.severity,
-                    message: data.message,
-                    timestamp: new Date()
-                });
-                
-                // Also send to public notifications room for non-logged in users
-                io.to('public_notifications').emit('new_disaster_alert', {
-                    id: notification._id,
-                    type: data.type,
-                    location: data.location,
-                    severity: data.severity,
-                    message: data.message,
-                    timestamp: new Date()
-                });
-
-                // Send to specific location
-                io.to(`location_${data.location.city}_${data.location.state}`).emit('local_disaster_alert', {
-                    id: notification._id,
-                    type: data.type,
-                    location: data.location,
-                    severity: data.severity,
-                    message: data.message,
-                    timestamp: new Date()
-                });
-
-            } catch (error) {
-                console.error('Error broadcasting disaster alert:', error);
-            }
-        });
 
         // Handle contribution updates
         socket.on('contribution_update', async (data) => {
@@ -109,14 +94,6 @@ module.exports = (io) => {
         });
 
         // Handle emergency broadcasts
-        socket.on('emergency_broadcast', (data) => {
-            io.emit('emergency_message', {
-                type: 'emergency',
-                message: data.message,
-                priority: data.priority,
-                timestamp: new Date()
-            });
-        });
 
         // Handle admin test notifications
         socket.on('admin-test-notification', (data) => {
@@ -156,29 +133,22 @@ module.exports = (io) => {
             });
         });
 
-        // Handle emergency broadcast from admin
+        // Consolidated emergency broadcast handler
         socket.on('emergency-broadcast', (data) => {
+            if (socket.user.role !== 'admin') return;
             console.log('Emergency broadcast from admin:', data);
             
-            // Broadcast to all connected users
-            io.emit('notification', {
+            const notification = {
                 type: 'emergency',
                 title: 'EMERGENCY ALERT',
                 message: data.message,
                 severity: 'extreme',
                 adminName: data.adminName,
                 timestamp: data.timestamp
-            });
+            };
 
-            // Also send to public notifications room for non-logged-in users
-            io.to('public_notifications').emit('notification', {
-                type: 'emergency',
-                title: 'EMERGENCY ALERT',
-                message: data.message,
-                severity: 'extreme',
-                adminName: data.adminName,
-                timestamp: data.timestamp
-            });
+            io.emit('notification', notification);
+            io.to('public_notifications').emit('notification', notification);
         });
 
         // Handle severity-based notifications from admin
@@ -219,30 +189,60 @@ module.exports = (io) => {
             });
         });
 
-        // Handle disaster alerts from test panel
+        // Consolidated disaster alert handler from admin test panel
         socket.on('disaster-alert', (data) => {
-            // Send to all connected users
-            io.emit('disaster_alert', {
+            if (socket.user.role !== 'admin') return;
+
+            const alertData = {
                 type: data.type,
                 severity: data.severity,
                 location: data.location,
                 message: data.message,
                 adminTest: data.adminTest,
                 timestamp: new Date()
-            });
-            
-            // Also send to public notifications room
-            io.to('public_notifications').emit('disaster_alert', {
-                type: data.type,
-                severity: data.severity,
-                location: data.location,
-                message: data.message,
-                adminTest: data.adminTest,
-                timestamp: new Date()
-            });
+            };
+
+            io.emit('disaster_alert', alertData);
+            io.to('public_notifications').emit('disaster_alert', alertData);
         });
 
+        // Handler for admins to request room and user data
+        if (socket.user.role === 'admin') {
+            socket.on('admin_get_rooms', () => {
+                const rooms = io.sockets.adapter.rooms;
+                const roomData = [];
+
+                const usersBySocketId = new Map();
+                for (const userData of connectedUsers.values()) {
+                    usersBySocketId.set(userData.socketId, userData);
+                }
+
+                for (const [roomId, socketIds] of rooms.entries()) {
+                    if (roomId.startsWith('user_')) continue; // Skip personal rooms for privacy
+
+                    const usersInRoom = [];
+                    for (const socketId of socketIds) {
+                        if (usersBySocketId.has(socketId)) {
+                            const user = usersBySocketId.get(socketId);
+                            usersInRoom.push({ id: user.id, role: user.role });
+                        } else {
+                            // Handle cases where user might not be in the map (e.g., public users)
+                            usersInRoom.push({ id: socketId, role: 'public' });
+                        }
+                    }
+
+                    roomData.push({ room: roomId, users: usersInRoom, count: socketIds.size });
+                }
+
+                socket.emit('admin_room_data', roomData);
+            });
+        }
+
         socket.on('disconnect', () => {
+            if (socket.user.id) {
+                connectedUsers.delete(socket.user.id);
+                io.to('role_admin').to('role_crpf').emit('user_disconnected', { userId: socket.user.id });
+            }
             console.log('User disconnected:', socket.id);
         });
     });
@@ -250,62 +250,58 @@ module.exports = (io) => {
     // Global function to broadcast disaster alerts
     global.broadcastDisasterAlert = async (disasterData) => {
         try {
-            const notification = new Notification({
-                type: disasterData.type,
-                location: disasterData.location,
-                severity: disasterData.severity,
-                message: disasterData.message,
-                broadcastTo: 'all'
-            });
-            await notification.save();
-
-            // Determine if this is a test or predicted disaster
-            const isTestOrPredicted = disasterData.source === 'manual' || disasterData.predictionDate;
-            
-            // Broadcast to all connected users
-            io.emit('new_disaster_alert', {
-                id: notification._id,
-                ...disasterData,
-                timestamp: new Date(),
-                isTest: disasterData.source === 'manual'
-            });
-            
-            // Specifically target public_notifications room for non-logged in users who have allowed notifications
-            io.to('public_notifications').emit('new_disaster_alert', {
-                id: notification._id,
-                ...disasterData,
-                timestamp: new Date(),
-                isTest: disasterData.source === 'manual'
-            });
-            
-            // If this is a high severity disaster, send an extreme alert to admins
-            if (disasterData.severity === 'high') {
-                io.to('role_admin').emit('extreme_disaster_alert', {
-                    id: notification._id,
-                    ...disasterData,
-                    timestamp: new Date(),
-                    requiresCrpfNotification: true
+            // 1. Fetch AI Safety Advice
+            let safetyAdvice = 'Stay safe and follow instructions from local authorities.';
+            try {
+                const adviceResponse = await axios.post(`${AI_SERVICE_URL}/api/llm-advice`, {
+                    disaster_type: disasterData.type,
+                    severity: disasterData.severity,
+                    location: disasterData.location
                 });
+                safetyAdvice = adviceResponse.data.advice;
+            } catch (aiError) {
+                console.error('Error fetching AI safety advice:', aiError.message);
             }
-            
-            // If this is a test or predicted disaster, also notify volunteers
-            // so they can sign up to help
-            if (isTestOrPredicted) {
-                // Find all users with volunteer role
-                const volunteers = await User.find({ role: 'volunteer', isBanned: { $ne: true } });
-                
-                // Send notification to each volunteer
-                for (const volunteer of volunteers) {
-                    io.to(`user_${volunteer._id}`).emit('volunteer_help_opportunity', {
-                        disasterId: notification._id,
-                        type: disasterData.type,
-                        location: disasterData.location,
-                        severity: disasterData.severity,
-                        message: `${disasterData.message} - Volunteers needed!`,
-                        timestamp: new Date()
-                    });
+
+            const alertPayload = {
+                ...disasterData,
+                safetyAdvice,
+                timestamp: new Date(),
+                isTest: disasterData.source === 'manual'
+            };
+
+            // 2. Find subscribed users near the disaster location (e.g., within 50km)
+            const nearbySubscribers = await Subscription.find({
+                location: {
+                    $near: {
+                        $geometry: disasterData.location.coordinates,
+                        $maxDistance: 50000 // 50 kilometers
+                    }
                 }
-            }
+            });
+
+            // 3. Find all other subscribers
+            const allSubscribers = await Subscription.find();
+
+            const notifiedSocketIds = new Set();
+
+            // 4. Send special 'local_disaster_alert' to nearby subscribers
+            nearbySubscribers.forEach(sub => {
+                if (io.sockets.sockets.has(sub.socketId)) {
+                    io.to(sub.socketId).emit('local_disaster_alert', alertPayload);
+                    notifiedSocketIds.add(sub.socketId);
+                }
+            });
+
+            // 5. Send 'new_disaster_alert' to other subscribers who were not notified
+            allSubscribers.forEach(sub => {
+                if (!notifiedSocketIds.has(sub.socketId) && io.sockets.sockets.has(sub.socketId)) {
+                    io.to(sub.socketId).emit('new_disaster_alert', alertPayload);
+                }
+            });
+
+            console.log(`Disaster alert sent to ${nearbySubscribers.length} nearby subscribers and ${allSubscribers.length - nearbySubscribers.length} other subscribers.`);
+
         } catch (error) {
             console.error('Error in global broadcast:', error);
         }
@@ -323,5 +319,10 @@ module.exports = (io) => {
         } catch (error) {
             console.error('Error notifying admins of extreme disaster:', error);
         }
+    };
+
+    // Global function to broadcast CRPF notifications
+    global.broadcastCrpfNotification = (notification) => {
+        io.emit('crpf_notification', notification);
     };
 };
